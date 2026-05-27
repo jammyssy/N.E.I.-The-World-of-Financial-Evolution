@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-100 text-ink-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply btn border border-ink-300 bg-white text-ink-700 hover:bg-ink-100;
+  }
+  .btn-ghost {
+    @apply btn text-ink-700 hover:bg-ink-100;
+  }
+  .input {
+    @apply w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm placeholder:text-ink-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-ink-700;
+  }
+  .card {
+    @apply rounded-lg bg-white shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full bg-ink-100 px-2.5 py-0.5 text-xs font-medium text-ink-700;
+  }
+  .chip-brand {
+    @apply inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700;
+  }
+  .prose-post {
+    @apply text-ink-900 leading-7;
+  }
+  .prose-post p { @apply my-3; }
+  .prose-post h1, .prose-post h2, .prose-post h3 { @apply font-semibold mt-5 mb-2; }
+  .prose-post h1 { @apply text-xl; }
+  .prose-post h2 { @apply text-lg; }
+  .prose-post ul { @apply list-disc pl-6 my-3; }
+  .prose-post ol { @apply list-decimal pl-6 my-3; }
+  .prose-post blockquote { @apply border-l-4 border-ink-300 pl-3 text-ink-700 italic my-3; }
+  .prose-post code { @apply bg-ink-100 px-1 rounded text-sm; }
+}

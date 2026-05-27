@@ -1,0 +1,144 @@
+// PEVC 知识平台 V1.0 数据模型
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- 用户 ----------
+model User {
+  id           Int      @id @default(autoincrement())
+  phone        String   @unique
+  nickname     String   @unique
+  role         String   // VC / PE / FA
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  posts     Post[]
+  comments  Comment[]
+  likes     PostLike[]
+  favorites PostFavorite[]
+  commentLikes CommentLike[]
+}
+
+// ---------- 内容 ----------
+model Post {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  title        String
+  body         String
+  tagScene     String   // 工作场景，必填
+  tagIndustry  String?  // 行业赛道
+  tagContent   String   // 工作内容，JSON string of array
+  tagSkill     String?  // Skill 类型
+  status       String   @default("published") // draft / pending / published / rejected
+  viewCount    Int      @default(0)
+  commentCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  author       User           @relation(fields: [userId], references: [id])
+  comments     Comment[]
+  attachments  Attachment[]
+  likes        PostLike[]
+  favorites    PostFavorite[]
+
+  @@index([createdAt])
+  @@index([tagScene])
+  @@index([userId])
+}
+
+// ---------- 附件 ----------
+model Attachment {
+  id            Int      @id @default(autoincrement())
+  postId        Int
+  uploaderId    Int
+  fileName      String
+  storageKey    String   // 本地路径 / OSS key
+  fileSize      Int
+  mimeType      String
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+// ---------- 评论 ----------
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  parentId  Int?
+  userId    Int
+  body      String
+  likeCount Int      @default(0)
+  createdAt DateTime @default(now())
+
+  post     Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[]     @relation("CommentReplies")
+  author   User          @relation(fields: [userId], references: [id])
+  likes    CommentLike[]
+
+  @@index([postId])
+  @@index([parentId])
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  commentId Int
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+}
+
+// ---------- 点赞 ----------
+model PostLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+}
+
+// ---------- 收藏 ----------
+model PostFavorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+}
+
+// ---------- 短信验证码（MVP 用 DB 模拟） ----------
+model SmsCode {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
