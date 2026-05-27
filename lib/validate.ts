@@ -1,3 +1,5 @@
+import sanitize from 'sanitize-html';
+
 export const isPhone = (v: string) => /^1[3-9]\d{9}$/.test(v);
 export const isNickname = (v: string) => v.length >= 2 && v.length <= 20 && !/[<>&"']/.test(v);
 export const isPassword = (v: string) =>
@@ -7,17 +9,33 @@ export const isCode = (v: string) => /^\d{6}$/.test(v);
 const SENSITIVE = ['admin', '管理员', '官方', '客服', 'root'];
 export const hasSensitive = (v: string) => SENSITIVE.some((w) => v.toLowerCase().includes(w));
 
-// 极简 HTML 清洗（白名单标签）
-const ALLOWED = ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'a', 'code', 'pre', 'img'];
 export function sanitizeHtml(html: string): string {
-  // 极简实现：剥离所有事件属性、script、iframe
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/\son\w+="[^"]*"/gi, '')
-    .replace(/\son\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/<(?!\/?(?:${ALLOWED.join('|')})\b)[^>]*>/gi, '');
+  return sanitize(html, {
+    allowedTags: [
+      'p',
+      'br',
+      'strong',
+      'em',
+      'u',
+      'ul',
+      'ol',
+      'li',
+      'blockquote',
+      'h1',
+      'h2',
+      'h3',
+      'a',
+      'code',
+      'pre',
+    ],
+    allowedAttributes: {
+      a: ['href', 'target', 'rel'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    transformTags: {
+      a: sanitize.simpleTransform('a', { rel: 'noopener noreferrer', target: '_blank' }),
+    },
+  });
 }
 
 export function stripHtml(html: string): string {

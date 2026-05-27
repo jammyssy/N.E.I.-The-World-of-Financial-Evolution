@@ -1,53 +1,28 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
-import { getCurrentUser, getSessionUid } from '@/lib/session';
+import { getCurrentUser } from '@/lib/session';
 import { sceneLabel, industryLabel, skillLabel, contentLabel, roleColor } from '@/lib/tags';
 import { formatBytes, formatTime, fileIcon, truncate } from '@/lib/format';
 import { CommentSection } from '@/components/CommentSection';
+import { getPostDetail } from '@/features/posts/queries';
 import { PostActions } from './PostActions';
 
 export default async function PostDetailPage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10);
   if (Number.isNaN(id)) notFound();
 
-  const post = await prisma.post.findUnique({
-    where: { id },
-    include: {
-      author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
-      attachments: { orderBy: { createdAt: 'asc' } },
-      _count: { select: { comments: true, likes: true, favorites: true } },
-    },
-  });
-  if (!post || post.status !== 'published') notFound();
-
-  await prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
-
   const me = await getCurrentUser();
-  const uid = me?.id ?? null;
-  let liked = false;
-  let favorited = false;
-  if (uid) {
-    const [l, f] = await Promise.all([
-      prisma.postLike.findUnique({ where: { userId_postId: { userId: uid, postId: id } } }),
-      prisma.postFavorite.findUnique({ where: { userId_postId: { userId: uid, postId: id } } }),
-    ]);
-    liked = !!l;
-    favorited = !!f;
-  }
-
-  const tagContent: string[] = (() => {
-    try {
-      return JSON.parse(post.tagContent || '[]');
-    } catch {
-      return [];
-    }
-  })();
+  const post = await getPostDetail(id, me?.id ?? null, true);
+  if (!post) notFound();
 
   return (
     <article className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="space-y-5">
         <header className="card p-6">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {post.skillAsset && <span className="chip-brand">{skillLabel(post.skillAsset.assetType)}</span>}
+            <span className="chip">{sceneLabel(post.tags.scene)}</span>
+          </div>
           <h1 className="text-2xl font-bold leading-snug">{post.title}</h1>
           <div className="mt-3 flex items-center gap-3 text-sm">
             <Link href={`/profile/${post.author.id}`} className="flex items-center gap-2 hover:text-brand-600">
@@ -64,52 +39,78 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           </div>
 
           <div className="mt-4 flex flex-wrap gap-1.5">
-            <Link href={`/?scene=${post.tagScene}`}>
-              <span className="chip-brand cursor-pointer hover:bg-brand-100">{sceneLabel(post.tagScene)}</span>
+            <Link href={`/?scene=${post.tags.scene}`}>
+              <span className="chip-brand cursor-pointer hover:bg-brand-100">{sceneLabel(post.tags.scene)}</span>
             </Link>
-            {post.tagIndustry && (
-              <Link href={`/?industry=${post.tagIndustry}`}>
-                <span className="chip cursor-pointer hover:bg-ink-300">{industryLabel(post.tagIndustry)}</span>
+            {post.tags.industry && (
+              <Link href={`/?industry=${post.tags.industry}`}>
+                <span className="chip cursor-pointer hover:bg-ink-300">{industryLabel(post.tags.industry)}</span>
               </Link>
             )}
-            {post.tagSkill && (
-              <Link href={`/?skill=${post.tagSkill}`}>
-                <span className="chip cursor-pointer hover:bg-ink-300">{skillLabel(post.tagSkill)}</span>
+            {post.skillAsset && (
+              <Link href={`/?assetType=${post.skillAsset.assetType}`}>
+                <span className="chip cursor-pointer hover:bg-ink-300">{skillLabel(post.skillAsset.assetType)}</span>
               </Link>
             )}
-            {tagContent.map((c) => (
-              <Link key={c} href={`/?content=${c}`}>
-                <span className="chip cursor-pointer hover:bg-ink-300">{contentLabel(c)}</span>
+            {post.tags.content.map((content) => (
+              <Link key={content} href={`/?content=${content}`}>
+                <span className="chip cursor-pointer hover:bg-ink-300">{contentLabel(content)}</span>
               </Link>
             ))}
           </div>
         </header>
 
+        {post.skillAsset && (post.skillAsset.sourceUrl || post.skillAsset.installHint || post.skillAsset.usageNotes) && (
+          <section className="card p-6">
+            <h2 className="mb-3 text-base font-semibold">Skill 资产信息</h2>
+            <dl className="space-y-3 text-sm">
+              {post.skillAsset.sourceUrl && (
+                <div>
+                  <dt className="text-xs text-ink-500">来源链接</dt>
+                  <dd>
+                    <a href={post.skillAsset.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
+                      {post.skillAsset.sourceUrl}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {post.skillAsset.installHint && (
+                <div>
+                  <dt className="text-xs text-ink-500">安装 / 使用前置说明</dt>
+                  <dd className="whitespace-pre-wrap text-ink-800">{post.skillAsset.installHint}</dd>
+                </div>
+              )}
+              {post.skillAsset.usageNotes && (
+                <div>
+                  <dt className="text-xs text-ink-500">适用场景 / 使用心得</dt>
+                  <dd className="whitespace-pre-wrap text-ink-800">{post.skillAsset.usageNotes}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+        )}
+
         <div className="card p-6">
-          <div className="prose-post" dangerouslySetInnerHTML={{ __html: post.body }} />
+          <div className="prose-post" dangerouslySetInnerHTML={{ __html: post.body ?? '' }} />
         </div>
 
         {post.attachments.length > 0 && (
           <section className="card p-6">
-            <h3 className="mb-3 text-base font-semibold">📎 附件 ({post.attachments.length})</h3>
+            <h3 className="mb-3 text-base font-semibold">附件 ({post.attachments.length})</h3>
             <ul className="divide-y divide-ink-300/60">
-              {post.attachments.map((a) => (
-                <li key={a.id} className="flex items-center gap-3 py-3">
-                  <span className="text-2xl">{fileIcon(a.mimeType, a.fileName)}</span>
+              {post.attachments.map((attachment) => (
+                <li key={attachment.id} className="flex items-center gap-3 py-3">
+                  <span className="text-2xl">{fileIcon(attachment.mimeType, attachment.fileName)}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium" title={a.fileName}>
-                      {truncate(a.fileName, 60)}
+                    <p className="truncate text-sm font-medium" title={attachment.fileName}>
+                      {truncate(attachment.fileName, 60)}
                     </p>
                     <p className="text-xs text-ink-500">
-                      {formatBytes(a.fileSize)} · {a.downloadCount} 次下载
+                      {formatBytes(attachment.fileSize)} · {attachment.downloadCount} 次下载
                     </p>
                   </div>
-                  {uid ? (
-                    <a
-                      href={`/api/files/${a.id}/download`}
-                      className="btn-secondary"
-                      download
-                    >
+                  {me ? (
+                    <a href={`/api/files/${attachment.id}/download`} className="btn-secondary" download>
                       下载
                     </a>
                   ) : (
@@ -125,10 +126,10 @@ export default async function PostDetailPage({ params }: { params: { id: string 
 
         <PostActions
           postId={id}
-          initialLiked={liked}
-          initialFavorited={favorited}
-          initialLikes={post._count.likes}
-          isAuthed={!!uid}
+          initialLiked={post.viewerState.liked}
+          initialFavorited={post.viewerState.favorited}
+          initialLikes={post.counts.likes}
+          isAuthed={!!me}
         />
 
         <CommentSection
@@ -152,28 +153,28 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           </Link>
         </div>
         <div className="card p-4 text-sm">
-          <h3 className="mb-3 font-semibold">本帖标签</h3>
+          <h3 className="mb-3 font-semibold">本资产标签</h3>
           <dl className="space-y-2 text-xs text-ink-500">
             <div>
               <dt className="text-ink-500">工作场景</dt>
-              <dd className="text-ink-900">{sceneLabel(post.tagScene)}</dd>
+              <dd className="text-ink-900">{sceneLabel(post.tags.scene)}</dd>
             </div>
-            {post.tagIndustry && (
+            {post.tags.industry && (
               <div>
                 <dt className="text-ink-500">行业赛道</dt>
-                <dd className="text-ink-900">{industryLabel(post.tagIndustry)}</dd>
+                <dd className="text-ink-900">{industryLabel(post.tags.industry)}</dd>
               </div>
             )}
-            {tagContent.length > 0 && (
+            {post.tags.content.length > 0 && (
               <div>
                 <dt className="text-ink-500">工作内容</dt>
-                <dd className="text-ink-900">{tagContent.map(contentLabel).join('、')}</dd>
+                <dd className="text-ink-900">{post.tags.content.map(contentLabel).join('、')}</dd>
               </div>
             )}
-            {post.tagSkill && (
+            {post.skillAsset && (
               <div>
                 <dt className="text-ink-500">Skill 类型</dt>
-                <dd className="text-ink-900">{skillLabel(post.tagSkill)}</dd>
+                <dd className="text-ink-900">{skillLabel(post.skillAsset.assetType)}</dd>
               </div>
             )}
           </dl>

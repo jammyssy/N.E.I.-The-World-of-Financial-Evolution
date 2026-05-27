@@ -8,8 +8,8 @@ export default async function PublishPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-1 text-2xl font-semibold">发布内容</h1>
-      <p className="mb-6 text-sm text-ink-500">分享你的方法论、模板、Prompt 或案例。打上准确的分类标签，让同行更容易找到。</p>
+      <h1 className="mb-1 text-2xl font-semibold">发布 Skill Asset</h1>
+      <p className="mb-6 text-sm text-ink-500">分享可复用的 Prompt、Workflow、Agent Skill、模板、脚本或案例，并沉淀到 PEVC Skills Map。</p>
       <PublishForm />
     </div>
   );

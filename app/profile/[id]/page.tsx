@@ -2,10 +2,10 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/session';
-import { stripHtml } from '@/lib/validate';
-import { PostCard, type PostCardData } from '@/components/PostCard';
+import { PostCard } from '@/components/PostCard';
 import { roleColor } from '@/lib/tags';
 import { formatTime } from '@/lib/format';
+import { listUserPosts } from '@/features/posts/queries';
 
 type SP = { tab?: string };
 
@@ -35,92 +35,7 @@ export default async function ProfilePage({
     isOwner ? prisma.postFavorite.count({ where: { userId: id } }) : Promise.resolve(0),
   ]);
 
-  // 取该 Tab 对应的内容
-  let posts: any[] = [];
-  if (tab === 'posts') {
-    const where = isOwner ? { userId: id } : { userId: id, status: 'published' };
-    posts = await prisma.post.findMany({
-      where,
-      include: {
-        author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
-        _count: { select: { comments: true, likes: true, attachments: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
-  } else if (tab === 'likes') {
-    const likes = await prisma.postLike.findMany({
-      where: { userId: id },
-      include: {
-        post: {
-          include: {
-            author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
-            _count: { select: { comments: true, likes: true, attachments: true } },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
-    posts = likes.filter((l) => l.post.status === 'published').map((l) => l.post);
-  } else if (tab === 'favorites') {
-    const favs = await prisma.postFavorite.findMany({
-      where: { userId: id },
-      include: {
-        post: {
-          include: {
-            author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
-            _count: { select: { comments: true, likes: true, attachments: true } },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
-    posts = favs.filter((f) => f.post.status === 'published').map((f) => f.post);
-  }
-
-  const myLikedIds = me
-    ? new Set(
-        (
-          await prisma.postLike.findMany({
-            where: { userId: me.id, postId: { in: posts.map((p) => p.id) } },
-            select: { postId: true },
-          })
-        ).map((l) => l.postId)
-      )
-    : new Set<number>();
-  const myFavIds = me
-    ? new Set(
-        (
-          await prisma.postFavorite.findMany({
-            where: { userId: me.id, postId: { in: posts.map((p) => p.id) } },
-            select: { postId: true },
-          })
-        ).map((f) => f.postId)
-      )
-    : new Set<number>();
-
-  const items: PostCardData[] = posts.map((p) => ({
-    id: p.id,
-    title: p.title,
-    excerpt: stripHtml(p.body).slice(0, 160),
-    tagScene: p.tagScene,
-    tagIndustry: p.tagIndustry,
-    tagContent: (() => {
-      try {
-        return JSON.parse(p.tagContent || '[]');
-      } catch {
-        return [];
-      }
-    })(),
-    tagSkill: p.tagSkill,
-    createdAt: p.createdAt.toISOString(),
-    author: { id: p.author.id, nickname: p.author.nickname, role: p.author.role },
-    counts: { comments: p._count.comments, likes: p._count.likes, attachments: p._count.attachments },
-    liked: myLikedIds.has(p.id),
-    favorited: myFavIds.has(p.id),
-  }));
+  const items = await listUserPosts(id, me?.id ?? null, tab, isOwner);
 
   return (
     <div>

@@ -24,7 +24,7 @@ export function FilterBar() {
 
   const scene = params.get('scene') || '';
   const industry = params.get('industry') || '';
-  const skill = params.get('skill') || '';
+  const assetType = params.get('assetType') || params.get('skill') || '';
   const role = params.get('role') || '';
   const time = params.get('time') || '';
   const contentSet = new Set(params.getAll('content'));
@@ -56,7 +56,7 @@ export function FilterBar() {
   };
 
   const reset = () => router.push('/');
-  const hasFilter = !!(scene || industry || skill || role || time || contentSet.size || q);
+  const hasFilter = !!(scene || industry || assetType || role || time || contentSet.size || q);
 
   const [showContent, setShowContent] = useState(false);
 
@@ -87,7 +87,7 @@ export function FilterBar() {
         </div>
         <div>
           <label className="label">Skill 类型</label>
-          <select className="input" value={skill} onChange={(e) => update('skill', e.target.value)}>
+          <select className="input" value={assetType} onChange={(e) => update('assetType', e.target.value)}>
             <option value="">全部</option>
             {SKILL_TAGS.map((t) => (
               <option key={t.value} value={t.value}>

@@ -10,22 +10,25 @@ export type PostCardData = {
   id: number;
   title: string;
   excerpt: string;
-  tagScene: string;
-  tagIndustry: string | null;
-  tagContent: string[];
-  tagSkill: string | null;
+  tags: {
+    scene: string;
+    industry: string | null;
+    content: string[];
+  };
+  skillAsset: {
+    assetType: string;
+  } | null;
   createdAt: string;
   author: { id: number; nickname: string; role: string };
   counts: { comments: number; likes: number; attachments: number };
-  liked: boolean;
-  favorited: boolean;
+  viewerState: { liked: boolean; favorited: boolean };
 };
 
 export function PostCard({ post, currentUserId }: { post: PostCardData; currentUserId: number | null }) {
   const router = useRouter();
-  const [liked, setLiked] = useState(post.liked);
+  const [liked, setLiked] = useState(post.viewerState.liked);
   const [likes, setLikes] = useState(post.counts.likes);
-  const [fav, setFav] = useState(post.favorited);
+  const [fav, setFav] = useState(post.viewerState.favorited);
 
   const toggleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -73,10 +76,10 @@ export function PostCard({ post, currentUserId }: { post: PostCardData; currentU
       <p className="mb-3 line-clamp-2 text-sm text-ink-700">{post.excerpt}</p>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <span className="chip-brand">{sceneLabel(post.tagScene)}</span>
-        {post.tagIndustry && <span className="chip">{industryLabel(post.tagIndustry)}</span>}
-        {post.tagSkill && <span className="chip">{skillLabel(post.tagSkill)}</span>}
-        {post.tagContent.map((c) => (
+        <span className="chip-brand">{sceneLabel(post.tags.scene)}</span>
+        {post.tags.industry && <span className="chip">{industryLabel(post.tags.industry)}</span>}
+        {post.skillAsset && <span className="chip">{skillLabel(post.skillAsset.assetType)}</span>}
+        {post.tags.content.map((c) => (
           <span key={c} className="chip">
             {contentLabel(c)}
           </span>

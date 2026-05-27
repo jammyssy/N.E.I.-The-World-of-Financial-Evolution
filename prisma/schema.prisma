@@ -25,6 +25,7 @@ model User {
   likes     PostLike[]
   favorites PostFavorite[]
   commentLikes CommentLike[]
+  downloadEvents DownloadEvent[]
 }
 
 // ---------- 内容 ----------
@@ -33,30 +34,60 @@ model Post {
   userId       Int
   title        String
   body         String
-  tagScene     String   // 工作场景，必填
-  tagIndustry  String?  // 行业赛道
-  tagContent   String   // 工作内容，JSON string of array
-  tagSkill     String?  // Skill 类型
   status       String   @default("published") // draft / pending / published / rejected
   viewCount    Int      @default(0)
   commentCount Int      @default(0)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   author       User           @relation(fields: [userId], references: [id])
+  skillAsset   SkillAsset?
+  tags         PostTag[]
   comments     Comment[]
   attachments  Attachment[]
   likes        PostLike[]
   favorites    PostFavorite[]
 
+  @@index([status, createdAt])
   @@index([createdAt])
-  @@index([tagScene])
   @@index([userId])
+}
+
+// ---------- Skill Asset ----------
+model SkillAsset {
+  id          Int      @id @default(autoincrement())
+  postId      Int      @unique
+  assetType   String   // prompt / agent-skill / workflow / tool-stack / template / api-script / case-study
+  sourceUrl   String?
+  installHint String?
+  usageNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([assetType])
+}
+
+// ---------- 内容标签 ----------
+model PostTag {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  dimension String   // scene / industry / content
+  value     String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, dimension, value])
+  @@index([dimension, value])
+  @@index([postId])
 }
 
 // ---------- 附件 ----------
 model Attachment {
   id            Int      @id @default(autoincrement())
-  postId        Int
+  postId        Int?
   uploaderId    Int
   fileName      String
   storageKey    String   // 本地路径 / OSS key
@@ -65,9 +96,11 @@ model Attachment {
   downloadCount Int      @default(0)
   createdAt     DateTime @default(now())
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  downloadEvents DownloadEvent[]
 
   @@index([postId])
+  @@index([uploaderId])
 }
 
 // ---------- 评论 ----------
@@ -129,6 +162,21 @@ model PostFavorite {
 
   @@unique([userId, postId])
   @@index([userId])
+}
+
+// ---------- 下载记录 ----------
+model DownloadEvent {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  attachmentId Int
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([attachmentId])
+  @@index([createdAt])
 }
 
 // ---------- 短信验证码（MVP 用 DB 模拟） ----------

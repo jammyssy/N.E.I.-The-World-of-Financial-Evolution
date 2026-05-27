@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSessionUid } from '@/lib/session';
 import { readFileByKey } from '@/lib/storage';
+import { recordDownload } from '@/features/attachments/service';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const uid = await getSessionUid();
@@ -9,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const id = parseInt(params.id, 10);
   const att = await prisma.attachment.findUnique({ where: { id } });
-  if (!att || att.postId === 0) {
+  if (!att || att.postId === null) {
     return NextResponse.json({ error: '文件不存在' }, { status: 404 });
   }
 
@@ -20,10 +21,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: '文件已丢失' }, { status: 410 });
   }
 
-  await prisma.attachment.update({
-    where: { id },
-    data: { downloadCount: { increment: 1 } },
-  });
+  await recordDownload(uid, id);
 
   // RFC 5987 编码非 ASCII 文件名
   const ascii = att.fileName.replace(/[^\x20-\x7e]/g, '_');

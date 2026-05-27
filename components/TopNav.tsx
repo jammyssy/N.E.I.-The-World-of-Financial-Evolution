@@ -42,6 +42,9 @@ export function TopNav({ user }: { user: User }) {
         </form>
 
         <nav className="ml-auto flex items-center gap-2">
+          <Link href="/skills-map" className="btn-ghost hidden sm:inline-flex">
+            Skills Map
+          </Link>
           {user ? (
             <>
               <Link href="/publish" className="btn-primary">

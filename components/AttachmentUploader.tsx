@@ -10,7 +10,7 @@ export type UploadedFile = {
   mimeType: string;
 };
 
-const ACCEPT = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.png,.jpg,.jpeg,.mp4,.zip,.md';
+const ACCEPT = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.mp4,.zip,.md,.txt';
 const MAX_FILES = 5;
 const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
 
@@ -33,6 +33,7 @@ export function AttachmentUploader({
       setErr(`单帖最多 ${MAX_FILES} 个附件`);
       return;
     }
+    let nextFiles = files;
     for (const f of arr) {
       if (f.size > MAX_SIZE) {
         setErr(`${f.name} 超过 100 MB`);
@@ -49,7 +50,8 @@ export function AttachmentUploader({
           setErr(data.error || '上传失败');
           continue;
         }
-        onChange([...files, data]);
+        nextFiles = [...nextFiles, data];
+        onChange(nextFiles);
         setProgress({ name: f.name, pct: 100 });
       } catch {
         setErr('网络错误');

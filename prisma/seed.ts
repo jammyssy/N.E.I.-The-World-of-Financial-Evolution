@@ -3,15 +3,67 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+type TagInput = {
+  scene: string;
+  industry?: string | null;
+  content?: string[];
+};
+
+type SkillSeed = {
+  userIndex: number;
+  title: string;
+  body: string;
+  assetType: string;
+  tags: TagInput;
+  sourceUrl?: string;
+  installHint?: string;
+  usageNotes?: string;
+};
+
+async function createSkillAsset(seed: SkillSeed, users: { id: number }[]) {
+  const post = await prisma.post.create({
+    data: {
+      userId: users[seed.userIndex].id,
+      title: seed.title,
+      body: seed.body,
+      status: 'published',
+    },
+  });
+
+  await prisma.skillAsset.create({
+    data: {
+      postId: post.id,
+      assetType: seed.assetType,
+      sourceUrl: seed.sourceUrl,
+      installHint: seed.installHint,
+      usageNotes: seed.usageNotes,
+    },
+  });
+
+  const tags = [
+    { dimension: 'scene', value: seed.tags.scene },
+    ...(seed.tags.industry ? [{ dimension: 'industry', value: seed.tags.industry }] : []),
+    ...(seed.tags.content ?? []).map((value) => ({ dimension: 'content', value })),
+  ];
+
+  await prisma.postTag.createMany({
+    data: tags.map((tag) => ({ ...tag, postId: post.id })),
+  });
+
+  return post;
+}
+
 async function main() {
   console.log('🌱 开始种子数据…');
 
-  // 清空（仅开发用）
+  await prisma.downloadEvent.deleteMany();
   await prisma.commentLike.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.postLike.deleteMany();
   await prisma.postFavorite.deleteMany();
   await prisma.attachment.deleteMany();
+  await prisma.postTag.deleteMany();
+  await prisma.skillAsset.deleteMany();
   await prisma.post.deleteMany();
   await prisma.smsCode.deleteMany();
   await prisma.user.deleteMany();
@@ -21,129 +73,111 @@ async function main() {
   const users = await Promise.all([
     prisma.user.create({
       data: { phone: '13800138001', nickname: '清流VC合伙人', role: 'VC', passwordHash: hash },
+      select: { id: true },
     }),
     prisma.user.create({
       data: { phone: '13800138002', nickname: 'PE研究员小李', role: 'PE', passwordHash: hash },
+      select: { id: true },
     }),
     prisma.user.create({
       data: { phone: '13800138003', nickname: 'FA-王经理', role: 'FA', passwordHash: hash },
+      select: { id: true },
     }),
     prisma.user.create({
       data: { phone: '13800138004', nickname: 'AI赛道分析师', role: 'VC', passwordHash: hash },
+      select: { id: true },
     }),
   ]);
 
   console.log('✅ 已创建 4 个用户（密码均为 password123）');
 
-  const posts = await Promise.all([
-    prisma.post.create({
-      data: {
-        userId: users[3].id,
-        title: '一个 AI Agent 项目初筛 SOP：从 Demo 到投资判断的 6 步法',
-        body: `<p>在过去半年里，我看了 70+ AI Agent 方向的项目，沉淀了一套快速筛选的 SOP。</p>
-<h2>第一步：定义可投性</h2>
-<p>不是所有 Agent 都值得投。我们关注的是<strong>能产生商业闭环</strong>且<strong>有数据飞轮</strong>的项目。</p>
-<h2>第二步：技术尽调清单</h2>
-<ul><li>底层模型策略：自研 / 微调 / API 调用</li><li>工程能力：上下文管理、工具调用、记忆机制</li><li>成本结构：单次 inference 成本曲线</li></ul>
-<h2>第三步：市场定位</h2>
-<p>横向看是否有 Wrapper 风险，纵向看 PMF 信号是否扎实。</p>
-<blockquote>典型红旗：90% 收入来自 Top 3 客户、技术栈完全依赖单一供应商、护城河等于 prompt engineering。</blockquote>
-<h2>第四步—第六步</h2>
-<p>团队评估、估值锚定、决策框架的具体打分表见附件。</p>`,
-        tagScene: 'screening',
-        tagIndustry: 'ai-saas',
-        tagContent: JSON.stringify(['risk-id', 'memo']),
-        tagSkill: 'workflow',
-        status: 'published',
-      },
-    }),
-    prisma.post.create({
-      data: {
-        userId: users[1].id,
-        title: 'DCF 估值模型常见 8 个坑（附 Excel 模板）',
-        body: `<p>做了 50 多个项目的 DCF 之后，总结的常见错误。</p>
-<h2>1. 终值占比过高</h2>
-<p>当终值占总估值超过 75%，模型实际上变成了一个对永续增长率的猜测游戏。</p>
-<h2>2. WACC 用了行业平均</h2>
-<p>对于早期 / 高增长公司，行业平均 WACC 严重低估了风险。</p>
-<h2>3. 未来 5 年都是高速增长</h2>
-<p>S 曲线的衰减是必然规律，模型里应当体现。</p>
-<p>剩余 5 个坑以及修正后的 Excel 模板见附件。</p>`,
-        tagScene: 'financial',
-        tagIndustry: null,
-        tagContent: JSON.stringify(['data-clean']),
-        tagSkill: 'template',
-        status: 'published',
-      },
-    }),
-    prisma.post.create({
-      data: {
-        userId: users[0].id,
-        title: '我给一线 VC 同事写的「IC 立项报告」万能 Prompt',
-        body: `<p>把投委会立项材料的撰写流程拆成了一个结构化 Prompt，可直接用于 Claude / ChatGPT。</p>
-<h2>核心结构</h2>
-<ul><li>项目一句话定位（不超过 30 字）</li><li>市场规模三段论：TAM / SAM / SOM</li><li>团队评估：履历 / 配合度 / 缺口</li><li>关键风险：3 个红旗与 mitigation</li><li>退出路径：IPO / M&A / 二级</li></ul>
+  const seeds: SkillSeed[] = [
+    {
+      userIndex: 3,
+      title: 'AI Agent 项目初筛 Workflow：从 Demo 到投资判断的 6 步法',
+      assetType: 'workflow',
+      tags: { scene: 'screening', industry: 'ai-saas', content: ['risk-id', 'memo'] },
+      usageNotes: '适合在项目初会后 30 分钟内完成快速判断，输出是否进入深度尽调的建议。',
+      body: `<p>在过去半年里，我看了 70+ AI Agent 方向的项目，沉淀了一套快速筛选的 SOP。</p>
+<h2>核心流程</h2>
+<ol><li>定义可投性：商业闭环、数据飞轮和预算归属</li><li>拆解 Demo：用户任务、工具调用、失败处理</li><li>判断 Wrapper 风险：模型依赖、工作流深度、客户粘性</li><li>核对技术成本：推理成本、延迟、上下文管理</li><li>访谈客户：是否进入真实业务系统</li><li>形成 IC 前置判断：继续、观察或放弃</li></ol>
+<blockquote>典型红旗：90% 收入来自 Top 3 客户、技术栈完全依赖单一供应商、护城河等于 prompt engineering。</blockquote>`,
+    },
+    {
+      userIndex: 1,
+      title: 'DCF 估值模型 Template：8 个常见坑的修正版',
+      assetType: 'template',
+      tags: { scene: 'financial', content: ['data-clean'] },
+      usageNotes: '适合 PE 研究员在建模复核时使用，附件可替换为正式 Excel 模板。',
+      body: `<p>做了 50 多个项目的 DCF 之后，总结了最容易被忽视的 8 个错误，并整理成模板。</p>
+<h2>模板检查项</h2>
+<ul><li>终值占比是否超过 75%</li><li>WACC 是否机械套用行业平均</li><li>增长率是否有 S 曲线衰减</li><li>营运资本和资本开支假设是否互相匹配</li></ul>
+<p>使用方法：先填经营假设，再跑敏感性分析，最后看估值区间是否由单一参数主导。</p>`,
+    },
+    {
+      userIndex: 0,
+      title: 'IC 立项报告 Prompt：VC 内部投委会材料生成器',
+      assetType: 'prompt',
+      tags: { scene: 'ic', industry: 'ai-saas', content: ['memo', 'report-gen'] },
+      installHint: '复制正文里的 Prompt 到 ChatGPT / Claude，替换项目输入信息即可使用。',
+      usageNotes: '建议先让模型生成第一稿，再由投资经理补充关键风险和反方观点。',
+      body: `<p>把投委会立项材料的撰写流程拆成了一个结构化 Prompt，可直接用于 Claude / ChatGPT。</p>
 <h2>完整 Prompt</h2>
-<pre><code>你是一位资深 VC 投委会成员。请基于以下输入信息，按照「定位 → 市场 → 团队 → 风险 → 退出」结构生成一份不超过 1500 字的立项报告...</code></pre>
-<p>测试结果：在 12 个真实项目上，输出可用率达 70%（即只需小幅修改即可送审）。</p>`,
-        tagScene: 'ic',
-        tagIndustry: 'ai-saas',
-        tagContent: JSON.stringify(['memo', 'report-gen']),
-        tagSkill: 'prompt',
-        status: 'published',
-      },
-    }),
-    prisma.post.create({
-      data: {
-        userId: users[2].id,
-        title: '生物医药 BD 项目路演材料 Checklist（FA 视角）',
-        body: `<p>作为生物医药方向的 FA，路演前我们会对 BP 做一轮 Checklist 复核。分享一份精简版。</p>
+<pre><code>你是一位资深 VC 投委会成员。请基于以下输入信息，按照「定位 → 市场 → 团队 → 风险 → 退出」结构生成一份不超过 1500 字的立项报告。请明确列出 3 个支持投资的理由、3 个反对投资的理由，以及需要继续尽调的问题清单。</code></pre>`,
+    },
+    {
+      userIndex: 2,
+      title: 'BioTech 路演材料 Checklist：FA 视角的 BP 复核清单',
+      assetType: 'case-study',
+      tags: { scene: 'fundraising', industry: 'biotech', content: ['doc-parse'] },
+      usageNotes: '适合融资启动前对 BP / IM 做最后一轮质量检查。',
+      body: `<p>作为生物医药方向的 FA，路演前我们会对 BP 做一轮 Checklist 复核。这里是一个真实项目改写后的精简版。</p>
 <h2>必备模块</h2>
-<ol><li>科学故事：mechanism + clinical unmet need</li><li>管线进度：IND / Phase I/II/III 时间表</li><li>BD 比较表：Top 3 竞品的最近交易对价</li><li>团队科学顾问：CSO / SAB 阵容</li><li>资金计划：next milestone 所需金额与时间</li></ol>
-<h2>常见缺失项</h2>
-<p>80% 的早期 BP 缺少「Plan B」叙事——当主管线遇到 setback 时的备份策略。</p>`,
-        tagScene: 'fundraising',
-        tagIndustry: 'biotech',
-        tagContent: JSON.stringify(['doc-parse']),
-        tagSkill: 'template',
-        status: 'published',
-      },
-    }),
-    prisma.post.create({
-      data: {
-        userId: users[3].id,
-        title: '用 Claude 自动化生成赛道扫描报告：3 小时变 20 分钟',
-        body: `<p>过去一周我把行业扫描的标准流程接入了 Claude Skills。原来需要 3 小时的工作量现在 20 分钟搞定。</p>
+<ol><li>科学故事：mechanism + clinical unmet need</li><li>管线进度：IND / Phase I/II/III 时间表</li><li>BD 比较表：Top 3 竞品最近交易对价</li><li>资金计划：next milestone 所需金额与时间</li></ol>
+<p>常见缺失项：80% 的早期 BP 缺少 Plan B 叙事。</p>`,
+    },
+    {
+      userIndex: 3,
+      title: 'Claude SKILL.md：自动生成赛道扫描报告',
+      assetType: 'agent-skill',
+      tags: { scene: 'industry-research', industry: 'ai-saas', content: ['automation', 'report-gen', 'info-gather'] },
+      sourceUrl: 'https://github.com/example/pevc-sector-scan-skill',
+      installHint: '将 SKILL.md 放入本地 AI 编程助手 skills 目录，并配置数据源 API Key。',
+      usageNotes: '适合每周固定生成赛道扫描报告，人工补充一线访谈和非公开数据。',
+      body: `<p>过去一周我把行业扫描的标准流程接入了 Claude Skills。原来需要 3 小时的工作量现在 20 分钟搞定。</p>
 <h2>工作流拆解</h2>
-<ol><li>输入：赛道关键词 + 时间窗口</li><li>抓取：crunchbase / 36kr 公开数据</li><li>分类：按融资轮次、地域聚合</li><li>生成：结构化 Markdown 报告 + 关键洞察</li></ol>
-<p>SKILL.md 详见附件。</p>`,
-        tagScene: 'industry-research',
-        tagIndustry: 'ai-saas',
-        tagContent: JSON.stringify(['automation', 'report-gen', 'info-gather']),
-        tagSkill: 'agent-skill',
-        status: 'published',
-      },
-    }),
-    prisma.post.create({
-      data: {
-        userId: users[0].id,
-        title: '投后董事会日历模板：让被投公司 CEO 主动汇报',
-        body: `<p>投后管理的痛点之一：被投 CEO 报喜不报忧、月报拖延。我们用一份「董事会日历模板」让节奏变成默认行为。</p>
-<h2>核心机制</h2>
-<ul><li>固定节奏：每月 25 日提交报表，次月 5 日董事会</li><li>结构化模板：财务 / 产品 / 团队 / 风险 4 大块</li><li>SLA 罚则：连续两次拖延则升级为月度紧急沟通</li></ul>
-<p>实际效果：被投按时率从 40% 提升至 92%。</p>`,
-        tagScene: 'post-investment',
-        tagIndustry: null,
-        tagContent: JSON.stringify(['memo']),
-        tagSkill: 'template',
-        status: 'published',
-      },
-    }),
-  ]);
+<ol><li>输入：赛道关键词 + 时间窗口</li><li>抓取：公开融资和新闻数据</li><li>分类：按融资轮次、地域、商业模式聚合</li><li>生成：结构化 Markdown 报告 + 关键洞察</li></ol>`,
+    },
+    {
+      userIndex: 0,
+      title: '投后董事会 Tool Stack：月报、看板和会议节奏组合',
+      assetType: 'tool-stack',
+      tags: { scene: 'post-investment', content: ['company-profile', 'risk-id'] },
+      usageNotes: '适合投后团队帮助被投 CEO 建立稳定汇报节奏。',
+      body: `<p>投后管理的痛点之一是被投 CEO 报喜不报忧、月报拖延。我们用一套工具组合把节奏变成默认行为。</p>
+<h2>推荐组合</h2>
+<ul><li>Notion：董事会材料沉淀</li><li>Google Sheets：核心经营指标看板</li><li>Slack / 飞书：风险事项升级</li><li>日历自动化：每月 25 日提交报表，次月 5 日董事会</li></ul>`,
+    },
+    {
+      userIndex: 1,
+      title: '并购标的舆情抓取 API Script：生成风险摘要',
+      assetType: 'api-script',
+      tags: { scene: 'business-dd', industry: 'consumer', content: ['info-gather', 'risk-id', 'automation'] },
+      installHint: '需要 Node.js 18+，配置 NEWS_API_KEY 后运行脚本。',
+      usageNotes: '适合商业尽调早期发现品牌、渠道、监管、诉讼相关风险。',
+      body: `<p>这个脚本会抓取目标公司及核心品牌近 180 天的公开新闻，并生成风险摘要。</p>
+<pre><code>NEWS_API_KEY=xxx node scripts/company-risk-scan.js "目标公司名称"</code></pre>
+<p>输出包括高频关键词、负面事件、监管线索和建议继续访谈的问题。</p>`,
+    },
+  ];
 
-  console.log(`✅ 已创建 ${posts.length} 篇内容`);
+  const posts = [];
+  for (const seed of seeds) {
+    posts.push(await createSkillAsset(seed, users));
+  }
 
-  // 部分点赞 & 收藏 & 评论
+  console.log(`✅ 已创建 ${posts.length} 个 Skill Asset`);
+
   await prisma.postLike.createMany({
     data: [
       { userId: users[1].id, postId: posts[0].id },
@@ -166,7 +200,7 @@ async function main() {
     data: {
       postId: posts[0].id,
       userId: users[1].id,
-      body: '第三步「市场定位」展开讲讲？特别想看 Wrapper 风险的判断维度。',
+      body: '第三步「Wrapper 风险」展开讲讲？最近看了几个项目都卡在这个问题上。',
     },
   });
   await prisma.comment.create({
@@ -174,32 +208,23 @@ async function main() {
       postId: posts[0].id,
       userId: users[3].id,
       parentId: c1.id,
-      body: '+1，最近看了几个项目都卡在这个问题上',
-    },
-  });
-  await prisma.comment.create({
-    data: {
-      postId: posts[0].id,
-      userId: users[0].id,
-      parentId: c1.id,
-      body: '@PE研究员小李 这部分细节我下篇单独写，建议关注。',
+      body: '@PE研究员小李 这部分我下篇单独写，建议重点看客户工作流嵌入深度。',
     },
   });
   await prisma.comment.create({
     data: {
       postId: posts[2].id,
       userId: users[1].id,
-      body: '试了一下，配合 thinking 模式效果更好。',
+      body: '试了一下，配合 thinking 模式效果更好，反方观点需要明确要求模型给证据。',
     },
   });
 
-  // 同步 commentCount
-  for (const p of posts) {
-    const cnt = await prisma.comment.count({ where: { postId: p.id } });
-    await prisma.post.update({ where: { id: p.id }, data: { commentCount: cnt } });
+  for (const post of posts) {
+    const cnt = await prisma.comment.count({ where: { postId: post.id } });
+    await prisma.post.update({ where: { id: post.id }, data: { commentCount: cnt } });
   }
 
-  console.log('✅ 已创建评论 / 点赞 / 收藏 演示数据');
+  console.log('✅ 已创建评论 / 点赞 / 收藏演示数据');
   console.log('\n🎉 完成！可用测试账号：');
   console.log('  手机 13800138001 (VC) / 13800138002 (PE) / 13800138003 (FA) / 13800138004 (VC)');
   console.log('  密码：password123');

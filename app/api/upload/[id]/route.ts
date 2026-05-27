@@ -1,23 +1,18 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 import { getSessionUid } from '@/lib/session';
-import { removeKey } from '@/lib/storage';
+import { deletePendingAttachment } from '@/features/attachments/service';
 
-// 仅允许删除未关联到帖子的附件（防止误删已发布内容的文件）
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const uid = await getSessionUid();
   if (!uid) return NextResponse.json({ error: '请先登录' }, { status: 401 });
 
   const id = parseInt(params.id, 10);
-  const att = await prisma.attachment.findUnique({ where: { id } });
-  if (!att || att.uploaderId !== uid) {
-    return NextResponse.json({ error: '无权限' }, { status: 403 });
-  }
-  if (att.postId !== 0) {
-    return NextResponse.json({ error: '已发布的附件请通过编辑帖子删除' }, { status: 400 });
+  if (Number.isNaN(id)) return NextResponse.json({ error: '参数错误' }, { status: 400 });
+
+  const result = await deletePendingAttachment(uid, id);
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  await removeKey(att.storageKey);
-  await prisma.attachment.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

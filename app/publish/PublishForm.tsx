@@ -10,10 +10,13 @@ export function PublishForm() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [assetType, setAssetType] = useState('');
   const [scene, setScene] = useState('');
   const [industry, setIndustry] = useState('');
   const [content, setContent] = useState<string[]>([]);
-  const [skill, setSkill] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [installHint, setInstallHint] = useState('');
+  const [usageNotes, setUsageNotes] = useState('');
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [err, setErr] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +36,7 @@ export function PublishForm() {
     if (title.trim().length < 5) return setErr('标题至少 5 字符');
     if (title.length > 100) return setErr('标题最多 100 字符');
     if (!body || body.replace(/<[^>]*>/g, '').trim().length === 0) return setErr('请输入正文');
+    if (!assetType) return setErr('请选择 Skill 类型');
     if (!scene) return setErr('请选择工作场景标签');
 
     setSubmitting(true);
@@ -42,10 +46,15 @@ export function PublishForm() {
       body: JSON.stringify({
         title: title.trim(),
         body,
-        tagScene: scene,
-        tagIndustry: industry || null,
-        tagContent: content,
-        tagSkill: skill || null,
+        assetType,
+        tags: {
+          scene,
+          industry: industry || null,
+          content,
+        },
+        sourceUrl: sourceUrl || null,
+        installHint: installHint || null,
+        usageNotes: usageNotes || null,
         attachmentIds: files.map((f) => f.id),
       }),
     });
@@ -61,6 +70,29 @@ export function PublishForm() {
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      <div className="card p-5">
+        <label className="label">
+          Skill 类型 <span className="text-red-500">*</span>
+        </label>
+        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {SKILL_TAGS.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setAssetType(t.value)}
+              className={`rounded-md border px-3 py-2 text-left text-sm ${
+                assetType === t.value
+                  ? 'border-brand-600 bg-brand-50 text-brand-700'
+                  : 'border-ink-300 hover:border-brand-500'
+              }`}
+            >
+              <div className="font-medium">{t.label}</div>
+              <div className="text-[11px] text-ink-500">{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="card p-5">
         <label className="label">标题 <span className="text-red-500">*</span></label>
         <input
@@ -79,7 +111,7 @@ export function PublishForm() {
       </div>
 
       <div className="card p-5">
-        <h3 className="mb-3 text-sm font-semibold">📍 分类标签</h3>
+        <h3 className="mb-3 text-sm font-semibold">分类标签</h3>
 
         <div className="mb-4">
           <label className="label">
@@ -134,25 +166,45 @@ export function PublishForm() {
           </div>
         </div>
 
-        <div>
-          <label className="label">
-            Skill 类型 <span className="ml-2 text-xs text-ink-500 font-normal">单选可选</span>
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            <ChipBtn active={skill === ''} onClick={() => setSkill('')}>
-              不选
-            </ChipBtn>
-            {SKILL_TAGS.map((t) => (
-              <ChipBtn key={t.value} active={skill === t.value} onClick={() => setSkill(t.value)}>
-                {t.label}
-              </ChipBtn>
-            ))}
+      </div>
+
+      <div className="card p-5">
+        <h3 className="mb-3 text-sm font-semibold">Skill 资产信息</h3>
+        <div className="grid gap-4">
+          <div>
+            <label className="label">来源链接</label>
+            <input
+              className="input"
+              placeholder="https://github.com/... 或工具文档链接"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label">安装 / 使用前置说明</label>
+            <textarea
+              className="input min-h-[80px]"
+              placeholder="例如需要的工具、环境变量、文件放置位置等"
+              value={installHint}
+              maxLength={2000}
+              onChange={(e) => setInstallHint(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label">适用场景 / 使用心得</label>
+            <textarea
+              className="input min-h-[80px]"
+              placeholder="说明这个资产适合谁、何时使用、有什么注意事项"
+              value={usageNotes}
+              maxLength={2000}
+              onChange={(e) => setUsageNotes(e.target.value)}
+            />
           </div>
         </div>
       </div>
 
       <div className="card p-5">
-        <h3 className="mb-3 text-sm font-semibold">📎 附件</h3>
+        <h3 className="mb-3 text-sm font-semibold">附件</h3>
         <AttachmentUploader files={files} onChange={setFiles} />
       </div>
 
