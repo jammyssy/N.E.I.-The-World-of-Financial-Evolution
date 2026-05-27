@@ -39,6 +39,85 @@ npm run dev
 
 访问 [http://localhost:3000](http://localhost:3000)
 
+## 团队协作约定
+
+我们会用比较轻量的 GitHub Flow 来协作，适合大家快速 vibe coding，同时避免互相覆盖代码。
+
+### 分支规则
+
+- `main`：稳定版本分支，不直接开发、不直接提交。
+- `pevc-platform`：当前集成开发分支，所有功能最终先合到这里。
+- 每个功能 / 修复都从 `pevc-platform` 拉独立分支开发。
+
+常用分支命名：
+
+```bash
+feat/skills-map
+feat/post-review-flow
+fix/upload-attachment
+fix/sanitize-html
+refactor/post-service
+chore/eslint-config
+```
+
+### 标准开发流程
+
+```bash
+# 1. 切到集成分支并同步最新代码
+git switch pevc-platform
+git pull
+
+# 2. 创建自己的功能分支
+git switch -c feat/your-feature-name
+
+# 3. 开发完成后提交
+git add .
+git commit -m "feat: add your feature"
+
+# 4. 推到 GitHub，开 Pull Request 到 pevc-platform
+git push -u origin feat/your-feature-name
+```
+
+### 提交信息规范
+
+推荐使用 Conventional Commits，方便大家看历史：
+
+```bash
+feat: add skills map matrix
+fix: repair attachment upload flow
+refactor: extract post query service
+chore: configure eslint
+docs: update collaboration guide
+```
+
+常用类型：
+
+- `feat`：新功能
+- `fix`：问题修复
+- `refactor`：重构，不改变用户可见行为
+- `chore`：工程配置、依赖、脚本
+- `docs`：文档
+- `style`：样式调整
+
+### 合并规则
+
+- 不直接 push 到 `main`。
+- 尽量不要直接 push 到 `pevc-platform`，除非是非常小的文档修正或团队明确同意。
+- 功能分支通过 Pull Request 合并到 `pevc-platform`。
+- 合并前至少确认：
+  - 本地能启动：`npm run dev`
+  - 生产构建通过：`npm run build`
+  - 没有把 `.env`、本地数据库、临时文件提交上来
+- PR 尽量小而清晰：一个 PR 只解决一个主题。
+
+### Vibe Coding 注意事项
+
+- 开始写代码前先 `git pull`，减少冲突。
+- 让 AI 改代码前，先确认自己在功能分支上。
+- 如果 AI 做了很多文件改动，提交前先看一遍 `git diff`。
+- 不确定的架构调整先开 issue 或在群里说一声，避免大家往不同方向改。
+- 数据库 schema、认证、上传、部署相关改动影响面较大，建议走 PR review。
+
 ## 测试账号
 
 | 手机号 | 密码 | 身份 | 昵称 |
