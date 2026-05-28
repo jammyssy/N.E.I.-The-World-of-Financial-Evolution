@@ -3,52 +3,111 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ROLE_TAGS } from '@/lib/tags';
+import { AuthFrame } from '@/components/auth/AuthFrame';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { RoleBadge } from '@/components/icons/RoleBadge';
+import { cn } from '@/lib/cn';
+
+type Role = 'VC' | 'PE' | 'FA';
+
+const STEPS = ['验证手机', '选择身份', '设定资料'];
+
+const ROLE_INFO: Record<Role, { en: string; tagline: string; desc: string }> = {
+  VC: {
+    en: 'Venture Capital',
+    tagline: '关注早期成长',
+    desc: '在未被验证的雄心里寻找下一个曲线',
+  },
+  PE: {
+    en: 'Private Equity',
+    tagline: '聚焦成熟期结构',
+    desc: '以现金流与并购重塑成熟资产',
+  },
+  FA: {
+    en: 'Financial Advisor',
+    tagline: '撮合方与中介',
+    desc: '在项目与资本之间建立握手',
+  },
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [form, setForm] = useState({ phone: '', code: '', role: '', nickname: '', password: '' });
-  const [err, setErr] = useState('');
+  const [stepIdx, setStepIdx] = useState(1); // 1 / 2 / 3
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [role, setRole] = useState<Role | ''>('');
+  const [nickname, setNickname] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [err, setErr] = useState<string | null>(null);
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [devCode, setDevCode] = useState('');
 
+  /* —— 发送短信 —— */
   const sendCode = async () => {
-    setErr('');
+    setErr(null);
+    setDevCode(null);
     setSending(true);
     const res = await fetch('/api/sms/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: form.phone }),
+      body: JSON.stringify({ phone }),
     });
     const data = await res.json();
     setSending(false);
-    if (!res.ok) setErr(data.error);
+    if (!res.ok) setErr(data.error || '发送失败');
     else setDevCode(data.devCode);
   };
 
-  const nextStep = (e: React.FormEvent) => {
+  /* —— 步骤 1 → 2 —— */
+  const goStep2 = (e: React.FormEvent) => {
     e.preventDefault();
-    setErr('');
-    if (!/^1[3-9]\d{9}$/.test(form.phone)) return setErr('手机号格式不正确');
-    if (!/^\d{6}$/.test(form.code)) return setErr('请输入 6 位验证码');
-    setStep(2);
+    setErr(null);
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      setErr('请输入有效的 11 位大陆手机号');
+      return;
+    }
+    if (!/^\d{6}$/.test(code)) {
+      setErr('请输入 6 位短信验证码');
+      return;
+    }
+    setStepIdx(2);
   };
 
+  /* —— 步骤 2 → 3 —— */
+  const goStep3 = () => {
+    setErr(null);
+    if (!role) {
+      setErr('请选择你的身份');
+      return;
+    }
+    setStepIdx(3);
+  };
+
+  /* —— 步骤 3 提交 —— */
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErr('');
+    setErr(null);
+    if (!(nickname.length >= 2 && nickname.length <= 20)) {
+      setErr('昵称需 2-20 字符');
+      return;
+    }
+    if (!(password.length >= 8 && password.length <= 20 && /[A-Za-z]/.test(password) && /\d/.test(password))) {
+      setErr('密码需 8-20 位，含字母与数字');
+      return;
+    }
     setSubmitting(true);
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ phone, code, role, nickname, password }),
     });
     const data = await res.json();
     setSubmitting(false);
     if (!res.ok) {
-      setErr(data.error);
+      setErr(data.error || '注册失败');
       return;
     }
     router.push('/');
@@ -56,126 +115,206 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto mt-8 max-w-md">
-      <div className="card p-6">
-        <h1 className="mb-1 text-2xl font-semibold">创建账号</h1>
-        <p className="mb-6 text-sm text-ink-500">加入 PEVC 知识社区，与 VC / PE / FA 同行共建知识库</p>
-
-        {/* 步骤指示 */}
-        <div className="mb-5 flex items-center gap-2 text-xs text-ink-500">
-          <span className={step === 1 ? 'text-brand-600 font-medium' : ''}>1. 手机验证</span>
-          <span>→</span>
-          <span className={step === 2 ? 'text-brand-600 font-medium' : ''}>2. 完善资料</span>
-        </div>
-
-        {step === 1 && (
-          <form onSubmit={nextStep} className="space-y-4">
-            <div>
-              <label className="label">手机号</label>
-              <input
-                className="input"
-                type="tel"
-                placeholder="11 位大陆手机号"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="label">短信验证码</label>
-              <div className="flex gap-2">
-                <input
-                  className="input"
-                  placeholder="6 位数字"
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value })}
-                />
-                <button
-                  type="button"
-                  onClick={sendCode}
-                  disabled={sending}
-                  className="btn-secondary whitespace-nowrap"
-                >
-                  {sending ? '发送中…' : '获取验证码'}
-                </button>
-              </div>
-              {devCode && (
-                <p className="mt-1 text-xs text-amber-600">
-                  开发模式：验证码为 <code className="font-mono font-semibold">{devCode}</code>
-                </p>
-              )}
-            </div>
-            {err && <p className="text-sm text-red-600">{err}</p>}
-            <button type="submit" className="btn-primary w-full">
-              下一步
-            </button>
-          </form>
-        )}
-
-        {step === 2 && (
-          <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className="label">选择身份</label>
-              <div className="grid grid-cols-3 gap-2">
-                {ROLE_TAGS.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setForm({ ...form, role: r.value })}
-                    className={`rounded-md border px-3 py-3 text-left ${
-                      form.role === r.value
-                        ? 'border-brand-600 bg-brand-50 text-brand-700'
-                        : 'border-ink-300 hover:border-brand-500'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold">{r.label}</div>
-                    <div className="mt-1 text-[11px] text-ink-500">{r.desc}</div>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1 text-xs text-ink-500">注册后身份不可自助修改</p>
-            </div>
-
-            <div>
-              <label className="label">昵称</label>
-              <input
-                className="input"
-                placeholder="2-20 字符，全平台唯一"
-                value={form.nickname}
-                onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="label">登录密码</label>
-              <input
-                className="input"
-                type="password"
-                placeholder="8-20 位，含字母和数字"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            </div>
-
-            {err && <p className="text-sm text-red-600">{err}</p>}
-
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1">
-                上一步
-              </button>
-              <button type="submit" disabled={submitting} className="btn-primary flex-1">
-                {submitting ? '提交中…' : '完成注册'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="mt-6 border-t border-ink-300/60 pt-4 text-center text-sm text-ink-500">
-          已有账号？{' '}
-          <Link href="/login" className="text-brand-600 hover:underline">
-            立即登录
+    <AuthFrame
+      eyebrow="Register · Volume I"
+      title="开启新卷"
+      subtitle="Open a new codex under your name"
+      step={{ current: stepIdx, labels: STEPS }}
+      size={stepIdx === 2 ? 'md' : 'sm'}
+      crest={stepIdx === 2}
+      footer={
+        <>
+          已有账号？
+          <Link
+            href="/login"
+            className="ml-1 underline underline-offset-4 decoration-paper-edge hover:text-ink-brown hover:decoration-ink-brown"
+          >
+            重启卷宗
           </Link>
+        </>
+      }
+    >
+      {/* ============ 屏 1：手机 + 验证码 ============ */}
+      {stepIdx === 1 && (
+        <form onSubmit={goStep2} className="space-y-6">
+          <Input
+            label="手机号"
+            type="tel"
+            placeholder="11 位大陆手机号"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.trim())}
+          />
+
+          <div>
+            <label className="mb-1.5 block font-serif text-sm text-ink-brown">
+              短信验证码
+            </label>
+            <div className="flex gap-2">
+              <input
+                className="block w-full rounded-sm border border-paper-edge bg-vellum px-3 py-2 text-sm font-sans text-ink-brown placeholder:text-sepia/70 focus:border-ink-brown focus:outline-none"
+                placeholder="6 位数字"
+                inputMode="numeric"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={sendCode}
+                disabled={sending || !/^1[3-9]\d{9}$/.test(phone)}
+                className="whitespace-nowrap"
+              >
+                {sending ? '发送中…' : '获取验证码'}
+              </Button>
+            </div>
+            {devCode && (
+              <p className="mt-1.5 text-xs font-sans text-gilded">
+                开发模式 · 验证码：
+                <span className="font-serif num-osf ml-1 text-sm">{devCode}</span>
+              </p>
+            )}
+          </div>
+
+          {err && (
+            <p className="text-sm font-sans text-wax-red border-l border-wax-red pl-3">
+              {err}
+            </p>
+          )}
+
+          <Button type="submit" block size="lg">
+            下一步 · 选择身份
+          </Button>
+        </form>
+      )}
+
+      {/* ============ 屏 2：身份徽章 ============ */}
+      {stepIdx === 2 && (
+        <div className="space-y-7">
+          <p className="font-serif italic text-leather text-center">
+            身份一经确认，不可自助修改 ——
+            <br className="hidden sm:block" />
+            如同纹章一经授予，便属于持有者一生
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {(Object.keys(ROLE_INFO) as Role[]).map((r) => {
+              const info = ROLE_INFO[r];
+              const active = role === r;
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className={cn(
+                    'group text-center px-5 py-7 border transition-all duration-150',
+                    'focus:outline-none',
+                    active
+                      ? 'border-ink-brown bg-parchment'
+                      : 'border-paper-edge bg-vellum hover:border-sepia',
+                  )}
+                >
+                  <div className="flex justify-center mb-4">
+                    <RoleBadge role={r} size={56} />
+                  </div>
+                  <p
+                    className={cn(
+                      'font-display tracking-display text-base mb-1',
+                      active ? 'text-ink-brown' : 'text-leather',
+                    )}
+                  >
+                    {r}
+                  </p>
+                  <p className="font-serif italic text-sm text-leather mb-2">
+                    {info.en}
+                  </p>
+                  <p className="font-sans text-xs text-sepia leading-relaxed">
+                    {info.desc}
+                  </p>
+                  {active && (
+                    <div className="mt-4 inline-flex items-center gap-1.5 font-sans text-[10px] tracking-wide text-gilded uppercase">
+                      <span className="w-1 h-1 rounded-full bg-gilded" />
+                      已选定
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {err && (
+            <p className="text-sm font-sans text-wax-red border-l border-wax-red pl-3">
+              {err}
+            </p>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setStepIdx(1)} className="flex-1">
+              ← 返回
+            </Button>
+            <Button onClick={goStep3} disabled={!role} className="flex-1" size="lg">
+              下一步 · 设定资料
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* ============ 屏 3：昵称 + 密码 ============ */}
+      {stepIdx === 3 && (
+        <form onSubmit={submit} className="space-y-6">
+          <div className="flex items-center gap-3 -mt-1 mb-2 pb-4 border-b border-paper-edge">
+            <RoleBadge role={role || 'VC'} size={32} />
+            <div>
+              <p className="font-display tracking-display text-xs text-sepia">
+                你的身份
+              </p>
+              <p className="font-serif text-base text-ink-brown">
+                {role && ROLE_INFO[role as Role].en}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStepIdx(2)}
+              className="ml-auto font-sans text-xs text-sepia underline underline-offset-4 decoration-paper-edge hover:text-ink-brown hover:decoration-ink-brown"
+            >
+              修改
+            </button>
+          </div>
+
+          <Input
+            label="昵称"
+            placeholder="2-20 字符 · 全平台唯一"
+            hint="将展示在你的发布、评论、徽章旁，建议使用真名或机构缩写"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            maxLength={20}
+          />
+
+          <Input
+            label="登录密码"
+            type="password"
+            placeholder="8-20 位，含字母与数字"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {err && (
+            <p className="text-sm font-sans text-wax-red border-l border-wax-red pl-3">
+              {err}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="secondary" type="button" onClick={() => setStepIdx(2)} className="flex-1">
+              ← 返回
+            </Button>
+            <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
+              {submitting ? '正在落印…' : '完成 · 落印封缄'}
+            </Button>
+          </div>
+        </form>
+      )}
+    </AuthFrame>
   );
 }

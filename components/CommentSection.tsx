@@ -3,10 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/format';
-import { roleColor } from '@/lib/tags';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Input';
+import { RoleBadge } from '@/components/icons/RoleBadge';
+import { Ornament } from '@/components/icons/Ornament';
 
-type Author = { id: number; nickname: string; role: string; avatarUrl: string | null };
+type Author = {
+  id: number;
+  nickname: string;
+  role: string;
+  avatarUrl: string | null;
+};
 type Comment = {
   id: number;
   postId: number;
@@ -18,6 +27,12 @@ type Comment = {
   replies: Comment[];
 };
 
+/**
+ * CommentSection · 卷末批注
+ * 评论：左侧细线纵向边 + 衬线人名 + 无衬线正文
+ * 回复：再缩进一级，左线变得更浅
+ * 输入框：衬线斜体 placeholder，像在书边写批注
+ */
 export function CommentSection({
   postId,
   postAuthorId,
@@ -67,7 +82,7 @@ export function CommentSection({
   };
 
   const remove = async (id: number) => {
-    if (!confirm('确定删除该评论？')) return;
+    if (!confirm('确定删除这则批注？')) return;
     await fetch(`/api/comments/${id}`, { method: 'DELETE' });
     refresh();
   };
@@ -75,49 +90,99 @@ export function CommentSection({
   const total = items.reduce((n, c) => n + 1 + c.replies.length, 0);
 
   return (
-    <section className="card p-5">
-      <h3 className="mb-4 text-base font-semibold">评论 {total > 0 && <span className="text-ink-500">({total})</span>}</h3>
+    <section className="mt-12">
+      {/* 章节小标题 */}
+      <div className="flex items-baseline gap-3 mb-6">
+        <span className="font-display tracking-display text-xs text-sepia uppercase">
+          Marginalia
+        </span>
+        <h3 className="font-serif text-xl text-ink-brown">卷末批注 · 评论</h3>
+        {total > 0 && (
+          <span className="font-serif italic text-sm text-sepia">
+            共 <span className="num-osf">{total}</span> 则
+          </span>
+        )}
+      </div>
 
-      <div className="mb-5">
+      {/* 输入区 */}
+      <div className="border border-paper-edge bg-vellum rounded-md p-5 mb-8">
         {replyTo && (
-          <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-ink-100 px-2 py-1 text-xs">
-            回复 @{replyTo.nickname}
-            <button onClick={() => setReplyTo(null)} className="text-ink-500 hover:text-red-600">
-              ✕
+          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-paper-edge font-sans text-xs">
+            <span className="text-sepia">回复</span>
+            <span className="font-serif italic text-ink-brown">@{replyTo.nickname}</span>
+            <button
+              onClick={() => setReplyTo(null)}
+              className="ml-auto text-sepia hover:text-wax-red"
+              aria-label="取消回复"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">
+                <path d="M1 1 L9 9 M9 1 L1 9" />
+              </svg>
             </button>
           </div>
         )}
-        <textarea
-          className="input min-h-[80px]"
-          placeholder={currentUser ? '发表评论…（1-1000 字符，可输入 @ 提及他人）' : '登录后参与讨论'}
+
+        <Textarea
+          rows={3}
+          maxLength={1000}
+          placeholder={
+            currentUser
+              ? '在此页空白处写下你的批注…（1-1000 字符，可用 @ 提及）'
+              : '登录后方可批注'
+          }
           value={text}
           onChange={(e) => setText(e.target.value)}
-          maxLength={1000}
           disabled={!currentUser}
         />
-        <div className="mt-2 flex items-center justify-end gap-3 text-xs text-ink-500">
-          <span>{text.length}/1000</span>
-          <button onClick={submit} disabled={submitting || text.trim().length === 0} className="btn-primary">
-            {submitting ? '提交中…' : '发布评论'}
-          </button>
+
+        <div className="mt-3 flex items-center justify-between font-sans text-xs">
+          <span className="text-sepia num-osf">
+            {text.length}/1000
+          </span>
+          {currentUser ? (
+            <Button
+              size="sm"
+              onClick={submit}
+              disabled={submitting || text.trim().length === 0}
+            >
+              {submitting ? '落墨中…' : '落墨'}
+            </Button>
+          ) : (
+            <Link
+              href={`/login?next=/posts/${postId}`}
+              className="font-serif italic text-sepia hover:text-ink-brown underline underline-offset-4 decoration-paper-edge hover:decoration-ink-brown"
+            >
+              登录以批注
+            </Link>
+          )}
         </div>
       </div>
 
+      {/* 评论列表 */}
       {loading ? (
-        <p className="text-sm text-ink-500">加载中…</p>
+        <p className="text-center font-serif italic text-sm text-sepia py-6">
+          正在翻阅批注…
+        </p>
       ) : items.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-500">还没有评论，来抢沙发</p>
+        <div className="text-center py-12">
+          <div className="flex justify-center mb-3 text-paper-edge">
+            <Ornament width={56} />
+          </div>
+          <p className="font-serif italic text-leather">
+            尚无批注 · 期待第一笔留墨
+          </p>
+        </div>
       ) : (
-        <ul className="space-y-5">
+        <ul className="space-y-7">
           {items.map((c) => (
             <CommentItem
               key={c.id}
               comment={c}
               postAuthorId={postAuthorId}
               currentUser={currentUser}
-              onReply={(c) => {
-                setReplyTo({ id: c.id, nickname: c.author.nickname });
-                setText((t) => (t.startsWith('@') ? t : `@${c.author.nickname} ` + t));
+              onReply={(target) => {
+                setReplyTo({ id: target.id, nickname: target.author.nickname });
+                if (!text.startsWith('@')) setText(`@${target.author.nickname} ` + text);
               }}
               onDelete={remove}
             />
@@ -128,6 +193,9 @@ export function CommentSection({
   );
 }
 
+/* ============================================================
+   单条批注
+   ============================================================ */
 function CommentItem({
   comment,
   postAuthorId,
@@ -141,68 +209,106 @@ function CommentItem({
   onReply: (c: Comment) => void;
   onDelete: (id: number) => void;
 }) {
-  const canDelete = currentUser && (currentUser.id === comment.author.id || currentUser.id === postAuthorId);
-  return (
-    <li>
-      <div className="flex gap-3">
-        <Link href={`/profile/${comment.author.id}`} className="shrink-0">
-          <span className="grid h-9 w-9 place-content-center rounded-full bg-brand-600 text-sm font-bold text-white">
-            {comment.author.nickname.slice(0, 1).toUpperCase()}
-          </span>
-        </Link>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-sm">
-            <Link href={`/profile/${comment.author.id}`} className="font-medium hover:text-brand-600">
-              {comment.author.nickname}
-            </Link>
-            <span className={`chip ${roleColor(comment.author.role)}`}>{comment.author.role}</span>
-            {comment.author.id === postAuthorId && <span className="chip-brand">作者</span>}
-            <span className="text-xs text-ink-500">{formatTime(comment.createdAt)}</span>
-          </div>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-ink-700">{comment.body}</p>
-          <div className="mt-1.5 flex gap-3 text-xs text-ink-500">
-            <button onClick={() => onReply(comment)} className="hover:text-brand-600">
-              回复
-            </button>
-            {canDelete && (
-              <button onClick={() => onDelete(comment.id)} className="hover:text-red-600">
-                删除
-              </button>
-            )}
-          </div>
+  const isAuthor = comment.author.id === postAuthorId;
+  const canDelete =
+    currentUser && (currentUser.id === comment.author.id || currentUser.id === postAuthorId);
 
-          {comment.replies.length > 0 && (
-            <ul className="mt-3 space-y-3 border-l-2 border-ink-300/60 pl-4">
-              {comment.replies.map((r) => (
-                <li key={r.id}>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="grid h-6 w-6 place-content-center rounded-full bg-brand-600 text-xs font-bold text-white">
-                      {r.author.nickname.slice(0, 1).toUpperCase()}
-                    </span>
-                    <Link href={`/profile/${r.author.id}`} className="font-medium hover:text-brand-600">
-                      {r.author.nickname}
-                    </Link>
-                    <span className={`chip ${roleColor(r.author.role)}`}>{r.author.role}</span>
-                    {r.author.id === postAuthorId && <span className="chip-brand">作者</span>}
-                    <span className="text-xs text-ink-500">{formatTime(r.createdAt)}</span>
-                  </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-ink-700">{r.body}</p>
-                  <div className="mt-1 flex gap-3 text-xs text-ink-500">
-                    <button onClick={() => onReply(r)} className="hover:text-brand-600">
-                      回复
-                    </button>
-                    {currentUser && (currentUser.id === r.author.id || currentUser.id === postAuthorId) && (
-                      <button onClick={() => onDelete(r.id)} className="hover:text-red-600">
-                        删除
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+  return (
+    <li className="relative">
+      {/* 顶层评论 —— 左侧细线 */}
+      <div className="border-l border-paper-edge pl-5">
+        <CommentHead author={comment.author} isAuthor={isAuthor} createdAt={comment.createdAt} />
+        <p className="mt-2 font-sans text-sm text-ink-brown leading-relaxed whitespace-pre-wrap">
+          {comment.body}
+        </p>
+        <CommentActions
+          onReply={() => onReply(comment)}
+          canDelete={!!canDelete}
+          onDelete={() => onDelete(comment.id)}
+        />
       </div>
+
+      {/* 二级回复 */}
+      {comment.replies.length > 0 && (
+        <ul className="mt-4 ml-5 space-y-4">
+          {comment.replies.map((r) => (
+            <li key={r.id} className="border-l border-paper-edge/70 pl-5">
+              <CommentHead
+                author={r.author}
+                isAuthor={r.author.id === postAuthorId}
+                createdAt={r.createdAt}
+                small
+              />
+              <p className="mt-1.5 font-sans text-sm text-ink-brown leading-relaxed whitespace-pre-wrap">
+                {r.body}
+              </p>
+              <CommentActions
+                onReply={() => onReply(r)}
+                canDelete={
+                  !!currentUser &&
+                  (currentUser.id === r.author.id || currentUser.id === postAuthorId)
+                }
+                onDelete={() => onDelete(r.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
     </li>
+  );
+}
+
+function CommentHead({
+  author,
+  isAuthor,
+  createdAt,
+  small,
+}: {
+  author: Author;
+  isAuthor: boolean;
+  createdAt: string;
+  small?: boolean;
+}) {
+  return (
+    <div className={cn('flex items-center gap-2 font-sans', small ? 'text-[11px]' : 'text-xs')}>
+      <RoleBadge role={author.role} size={small ? 13 : 15} />
+      <Link
+        href={`/profile/${author.id}`}
+        className="font-serif text-base text-ink-brown hover:text-wax-red transition-colors"
+        style={{ fontSize: small ? '14px' : '15px' }}
+      >
+        {author.nickname}
+      </Link>
+      {isAuthor && (
+        <span className="px-1.5 border border-gilded/60 text-gilded font-serif text-[10px] tracking-wide">
+          原作
+        </span>
+      )}
+      <span className="text-sepia">·</span>
+      <span className="text-sepia">{formatTime(createdAt)}</span>
+    </div>
+  );
+}
+
+function CommentActions({
+  onReply,
+  canDelete,
+  onDelete,
+}: {
+  onReply: () => void;
+  canDelete: boolean;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="mt-2 flex items-center gap-4 font-sans text-xs text-sepia">
+      <button onClick={onReply} className="hover:text-ink-brown transition-colors">
+        回复
+      </button>
+      {canDelete && (
+        <button onClick={onDelete} className="hover:text-wax-red transition-colors">
+          删除
+        </button>
+      )}
+    </div>
   );
 }

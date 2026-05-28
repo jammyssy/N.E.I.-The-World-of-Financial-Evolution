@@ -2,38 +2,49 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/cn';
 import { RichEditor } from '@/components/RichEditor';
-import { AttachmentUploader, type UploadedFile } from '@/components/AttachmentUploader';
-import { SCENE_TAGS, INDUSTRY_TAGS, CONTENT_TAGS, SKILL_TAGS } from '@/lib/tags';
+import {
+  AttachmentUploader,
+  type UploadedFile,
+} from '@/components/AttachmentUploader';
+import { Button } from '@/components/ui/Button';
+import { RoleBadge } from '@/components/icons/RoleBadge';
+import {
+  SCENE_TAGS,
+  INDUSTRY_TAGS,
+  CONTENT_TAGS,
+  SKILL_TAGS,
+} from '@/lib/tags';
+import { SkillIcon } from '@/components/icons/SkillIcon';
 
-export function PublishForm() {
+type CurrentUser = { id: number; role: string; nickname: string };
+
+export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [scene, setScene] = useState('');
   const [industry, setIndustry] = useState('');
-  const [content, setContent] = useState<string[]>([]);
+  const [contents, setContents] = useState<string[]>([]);
   const [skill, setSkill] = useState('');
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [err, setErr] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const toggleContent = (v: string) => {
-    if (content.includes(v)) {
-      setContent(content.filter((x) => x !== v));
-    } else if (content.length < 3) {
-      setContent([...content, v]);
-    }
+    if (contents.includes(v)) setContents(contents.filter((x) => x !== v));
+    else if (contents.length < 3) setContents([...contents, v]);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
-
     if (title.trim().length < 5) return setErr('标题至少 5 字符');
     if (title.length > 100) return setErr('标题最多 100 字符');
-    if (!body || body.replace(/<[^>]*>/g, '').trim().length === 0) return setErr('请输入正文');
-    if (!scene) return setErr('请选择工作场景标签');
+    if (!body || body.replace(/<[^>]*>/g, '').trim().length === 0)
+      return setErr('请书写正文');
+    if (!scene) return setErr('请为本卷指定工作场景');
 
     setSubmitting(true);
     const res = await fetch('/api/posts', {
@@ -44,7 +55,7 @@ export function PublishForm() {
         body,
         tagScene: scene,
         tagIndustry: industry || null,
-        tagContent: content,
+        tagContent: contents,
         tagSkill: skill || null,
         attachmentIds: files.map((f) => f.id),
       }),
@@ -52,7 +63,7 @@ export function PublishForm() {
     const data = await res.json();
     setSubmitting(false);
     if (!res.ok) {
-      setErr(data.error || '发布失败');
+      setErr(data.error || '落印失败');
       return;
     }
     router.push(`/posts/${data.id}`);
@@ -60,133 +71,319 @@ export function PublishForm() {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="card p-5">
-        <label className="label">标题 <span className="text-red-500">*</span></label>
+    <form onSubmit={submit} className="space-y-section">
+      {/* —— 作者条 —— */}
+      <div className="flex items-center gap-3 pb-5 border-b border-paper-edge">
+        <RoleBadge role={currentUser.role} size={22} />
+        <div>
+          <p className="font-display tracking-display text-[10px] text-sepia uppercase">
+            Author
+          </p>
+          <p className="font-serif text-base text-ink-brown">
+            {currentUser.nickname}
+          </p>
+        </div>
+        <p className="ml-auto font-serif italic text-xs text-sepia">
+          作者一经落印不可更改
+        </p>
+      </div>
+
+      {/* ===== Section I · 标题 ===== */}
+      <Section numeral="I" title="标题" hint="5-100 字符 · 一句话概括所要传达">
         <input
-          className="input text-lg"
-          placeholder="一句话概括你要分享的内容（5-100 字符）"
-          value={title}
+          className={cn(
+            'w-full bg-transparent border-0 border-b border-paper-edge',
+            'font-serif text-2xl sm:text-3xl text-ink-brown placeholder:text-sepia/60 italic',
+            'focus:border-ink-brown focus:outline-none transition-colors',
+            'py-3',
+          )}
+          placeholder="此处书写卷名…"
           maxLength={100}
+          value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <p className="mt-1 text-right text-xs text-ink-500">{title.length}/100</p>
-      </div>
+        <p className="mt-1 font-sans text-[11px] text-sepia text-right num-osf">
+          {title.length}/100
+        </p>
+      </Section>
 
-      <div className="card p-5">
-        <label className="label">正文 <span className="text-red-500">*</span></label>
-        <RichEditor value={body} onChange={setBody} />
-      </div>
+      {/* ===== Section II · 正文 ===== */}
+      <Section numeral="II" title="正文" hint="衬线排版 · 可加粗 · 引文 · 列表 · 链接">
+        <RichEditor value={body} onChange={setBody} placeholder="此处书写正文…" />
+      </Section>
 
-      <div className="card p-5">
-        <h3 className="mb-3 text-sm font-semibold">📍 分类标签</h3>
-
-        <div className="mb-4">
-          <label className="label">
-            工作场景 <span className="text-red-500">*</span>
-            <span className="ml-2 text-xs text-ink-500 font-normal">单选必填</span>
-          </label>
-          <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* ===== Section III · 四维标签 ===== */}
+      <Section numeral="III" title="四维标签" hint="为本卷打上分类印章，便于他人检索">
+        {/* 工作场景 */}
+        <Dimension label="工作场景" required hint="单选 · 必填">
+          <ChipSet>
             {SCENE_TAGS.map((t) => (
-              <button
+              <SealChip
                 key={t.value}
-                type="button"
+                active={scene === t.value}
                 onClick={() => setScene(t.value)}
-                className={`rounded-md border px-3 py-2 text-left text-sm ${
-                  scene === t.value
-                    ? 'border-brand-600 bg-brand-50 text-brand-700'
-                    : 'border-ink-300 hover:border-brand-500'
-                }`}
               >
-                <div className="font-medium">{t.label}</div>
-                <div className="text-[11px] text-ink-500">{t.desc}</div>
-              </button>
+                {t.label}
+              </SealChip>
             ))}
-          </div>
-        </div>
+          </ChipSet>
+        </Dimension>
 
-        <div className="mb-4">
-          <label className="label">
-            行业赛道 <span className="ml-2 text-xs text-ink-500 font-normal">单选可选</span>
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            <ChipBtn active={industry === ''} onClick={() => setIndustry('')}>
-              不选
-            </ChipBtn>
+        {/* 行业赛道 */}
+        <Dimension label="行业赛道" hint="单选 · 选填">
+          <ChipSet>
+            <PillChip active={industry === ''} onClick={() => setIndustry('')}>
+              不指定
+            </PillChip>
             {INDUSTRY_TAGS.map((t) => (
-              <ChipBtn key={t.value} active={industry === t.value} onClick={() => setIndustry(t.value)}>
+              <PillChip
+                key={t.value}
+                active={industry === t.value}
+                onClick={() => setIndustry(t.value)}
+              >
                 {t.label}
-              </ChipBtn>
+              </PillChip>
             ))}
-          </div>
-        </div>
+          </ChipSet>
+        </Dimension>
 
-        <div className="mb-4">
-          <label className="label">
-            工作内容 <span className="ml-2 text-xs text-ink-500 font-normal">多选，最多 3 个</span>
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+        {/* 工作内容 */}
+        <Dimension
+          label="工作内容"
+          hint={`多选 · 最多 3 个 · 已选 ${contents.length}`}
+        >
+          <ChipSet>
             {CONTENT_TAGS.map((t) => (
-              <ChipBtn key={t.value} active={content.includes(t.value)} onClick={() => toggleContent(t.value)}>
+              <FoldChip
+                key={t.value}
+                active={contents.includes(t.value)}
+                disabled={!contents.includes(t.value) && contents.length >= 3}
+                onClick={() => toggleContent(t.value)}
+              >
                 {t.label}
-              </ChipBtn>
+              </FoldChip>
             ))}
-          </div>
-        </div>
+          </ChipSet>
+        </Dimension>
 
-        <div>
-          <label className="label">
-            Skill 类型 <span className="ml-2 text-xs text-ink-500 font-normal">单选可选</span>
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            <ChipBtn active={skill === ''} onClick={() => setSkill('')}>
-              不选
-            </ChipBtn>
+        {/* Skill */}
+        <Dimension label="Skill 类型" hint="单选 · 选填">
+          <ChipSet>
+            <BadgeChip active={skill === ''} onClick={() => setSkill('')}>
+              不指定
+            </BadgeChip>
             {SKILL_TAGS.map((t) => (
-              <ChipBtn key={t.value} active={skill === t.value} onClick={() => setSkill(t.value)}>
+              <BadgeChip
+                key={t.value}
+                active={skill === t.value}
+                onClick={() => setSkill(t.value)}
+                icon={<SkillIcon skill={t.value} size={11} />}
+              >
                 {t.label}
-              </ChipBtn>
+              </BadgeChip>
             ))}
-          </div>
-        </div>
-      </div>
+          </ChipSet>
+        </Dimension>
+      </Section>
 
-      <div className="card p-5">
-        <h3 className="mb-3 text-sm font-semibold">📎 附件</h3>
+      {/* ===== Section IV · 附件 ===== */}
+      <Section numeral="IV" title="附件" hint="选填 · 最多 5 件 · 单件 ≤ 100 MB">
         <AttachmentUploader files={files} onChange={setFiles} />
-      </div>
+      </Section>
 
-      {err && <p className="text-sm text-red-600">{err}</p>}
+      {/* ===== 错误 + 提交 ===== */}
+      {err && (
+        <p className="font-sans text-sm text-wax-red border-l border-wax-red pl-3">
+          {err}
+        </p>
+      )}
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => router.back()} className="btn-secondary">
-          取消
-        </button>
-        <button type="submit" disabled={submitting} className="btn-primary">
-          {submitting ? '发布中…' : '发布'}
-        </button>
+      <div className="border-t border-paper-edge pt-6 flex items-center justify-between gap-3">
+        <p className="font-serif italic text-xs text-sepia hidden sm:block">
+          落印之后即对社群可见
+        </p>
+        <div className="flex gap-3 ml-auto">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.back()}
+          >
+            搁笔
+          </Button>
+          <Button type="submit" size="lg" disabled={submitting}>
+            {submitting ? '正在落印…' : '落印 · 发布'}
+          </Button>
+        </div>
       </div>
     </form>
   );
 }
 
-function ChipBtn({
+/* ============================================================
+   Section · 章节式分组
+   ============================================================ */
+function Section({
+  numeral,
+  title,
+  hint,
   children,
+}: {
+  numeral: string;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="flex items-baseline gap-3 mb-4">
+        <span className="font-display tracking-display text-xs text-sepia">
+          {numeral}
+        </span>
+        <h2 className="font-serif text-2xl text-ink-brown">{title}</h2>
+        {hint && (
+          <span className="font-serif italic text-xs text-sepia ml-1">
+            · {hint}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Dimension({
+  label,
+  hint,
+  required,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6 last:mb-0">
+      <div className="flex items-baseline gap-2 mb-2.5">
+        <span className="font-serif text-sm text-ink-brown">{label}</span>
+        {required && (
+          <span className="font-sans text-[10px] text-wax-red tracking-wide uppercase">
+            Required
+          </span>
+        )}
+        {hint && <span className="font-sans text-[10px] text-sepia tracking-wide">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ChipSet({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-wrap gap-1.5">{children}</div>;
+}
+
+/* —— 四种 Chip 形态（与 FilterBar 一致） —— */
+function SealChip({
   active,
   onClick,
+  children,
 }: {
-  children: React.ReactNode;
   active: boolean;
   onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs ${
-        active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-ink-300 text-ink-700 hover:border-brand-500'
-      }`}
+      className={cn(
+        'inline-flex items-center px-2.5 h-6 text-xs font-serif uppercase tracking-wide transition-colors',
+        active
+          ? 'border border-ink-brown bg-ink-brown text-vellum'
+          : 'border border-paper-edge text-leather hover:border-ink-brown hover:text-ink-brown',
+      )}
     >
+      {children}
+    </button>
+  );
+}
+function PillChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center px-3 h-6 text-xs font-sans rounded-full transition-colors',
+        active ? 'bg-leather text-vellum' : 'bg-linen text-leather hover:bg-paper-edge',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+function FoldChip({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'inline-flex items-center px-2.5 h-6 text-xs font-sans transition-colors',
+        active
+          ? 'border border-ink-brown bg-parchment text-ink-brown'
+          : 'border border-paper-edge bg-parchment text-leather hover:border-sepia',
+        disabled && 'opacity-40 cursor-not-allowed',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+function BadgeChip({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 pl-1.5 pr-3 h-6 text-xs font-sans rounded-full transition-colors',
+        active
+          ? 'bg-gilded/15 border border-gilded text-ink-brown'
+          : 'bg-vellum border border-gilded/40 text-leather hover:border-gilded',
+      )}
+    >
+      {icon && (
+        <span className="grid place-content-center w-4 h-4 rounded-full bg-parchment text-gilded">
+          {icon}
+        </span>
+      )}
       {children}
     </button>
   );

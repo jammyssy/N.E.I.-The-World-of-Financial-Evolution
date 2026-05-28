@@ -25,6 +25,25 @@ model User {
   likes     PostLike[]
   favorites PostFavorite[]
   commentLikes CommentLike[]
+
+  // 关注关系
+  following UserFollow[] @relation("Follower")  // 我关注的人
+  followers UserFollow[] @relation("Followee")  // 关注我的人
+}
+
+// ---------- 关注 ----------
+model UserFollow {
+  id         Int      @id @default(autoincrement())
+  followerId Int      // 谁
+  followeeId Int      // 关注谁
+  createdAt  DateTime @default(now())
+
+  follower User @relation("Follower", fields: [followerId], references: [id])
+  followee User @relation("Followee", fields: [followeeId], references: [id])
+
+  @@unique([followerId, followeeId])
+  @@index([followerId])
+  @@index([followeeId])
 }
 
 // ---------- 内容 ----------

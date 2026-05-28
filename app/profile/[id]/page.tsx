@@ -2,12 +2,29 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/session';
+import { cn } from '@/lib/cn';
 import { stripHtml } from '@/lib/validate';
-import { PostCard, type PostCardData } from '@/components/PostCard';
-import { roleColor } from '@/lib/tags';
 import { formatTime } from '@/lib/format';
+import { PostCard, type PostCardData } from '@/components/PostCard';
+import { RoleBadge } from '@/components/icons/RoleBadge';
+import { CrestCorners } from '@/components/icons/Crest';
+import { Ornament } from '@/components/icons/Ornament';
+import { FollowButton } from '@/components/FollowButton';
+
+const ROLE_FULL: Record<string, string> = {
+  VC: 'Venture Capital',
+  PE: 'Private Equity',
+  FA: 'Financial Advisor',
+};
 
 type SP = { tab?: string };
+type Tab = 'posts' | 'likes' | 'favorites';
+
+const TAB_LABEL: Record<Tab, { numeral: string; label: string; subtitle: string; ownerOnly: boolean }> = {
+  posts:     { numeral: 'I',   label: '卷帙',  subtitle: '已发布卷',   ownerOnly: false },
+  likes:     { numeral: 'II',  label: '致意',  subtitle: '点赞过的卷', ownerOnly: true },
+  favorites: { numeral: 'III', label: '封缄',  subtitle: '私下收藏',   ownerOnly: true },
+};
 
 export default async function ProfilePage({
   params,
@@ -24,18 +41,38 @@ export default async function ProfilePage({
 
   const me = await getCurrentUser();
   const isOwner = me?.id === id;
-  const tab = searchParams.tab ?? 'posts';
+  const tab = (searchParams.tab ?? 'posts') as Tab;
 
-  // 非本人只能看「我的发布」
-  if (!isOwner && tab !== 'posts') redirect(`/profile/${id}`);
+  // 非本人不允许访问私密 Tab
+  if (!isOwner && TAB_LABEL[tab]?.ownerOnly) redirect(`/profile/${id}`);
 
-  const [postCount, likeCount, favCount] = await Promise.all([
-    prisma.post.count({ where: { userId: id, status: 'published' } }),
-    isOwner ? prisma.postLike.count({ where: { userId: id } }) : Promise.resolve(0),
-    isOwner ? prisma.postFavorite.count({ where: { userId: id } }) : Promise.resolve(0),
-  ]);
+  /* —— 计数 —— */
+  const [postCount, likeCount, favCount, receivedLikesAgg, followersCount, followingCount, myFollowRow] =
+    await Promise.all([
+      prisma.post.count({
+        where: isOwner ? { userId: id } : { userId: id, status: 'published' },
+      }),
+      isOwner ? prisma.postLike.count({ where: { userId: id } }) : Promise.resolve(0),
+      isOwner ? prisma.postFavorite.count({ where: { userId: id } }) : Promise.resolve(0),
+      // 该用户所有已发布卷收到的点赞合计
+      prisma.postLike.count({
+        where: { post: { userId: id, status: 'published' } },
+      }),
+      // 粉丝数
+      prisma.userFollow.count({ where: { followeeId: id } }),
+      // 该用户关注的人数
+      prisma.userFollow.count({ where: { followerId: id } }),
+      // 当前登录用户是否已关注此人
+      me && !isOwner
+        ? prisma.userFollow.findUnique({
+            where: { followerId_followeeId: { followerId: me.id, followeeId: id } },
+          })
+        : Promise.resolve(null),
+    ]);
+  const receivedLikes = receivedLikesAgg;
+  const isFollowing = !!myFollowRow;
 
-  // 取该 Tab 对应的内容
+  /* —— 取该 Tab 对应的内容 —— */
   let posts: any[] = [];
   if (tab === 'posts') {
     const where = isOwner ? { userId: id } : { userId: id, status: 'published' };
@@ -80,6 +117,7 @@ export default async function ProfilePage({
     posts = favs.filter((f) => f.post.status === 'published').map((f) => f.post);
   }
 
+  /* —— 我对这些 post 的点赞/收藏（用于卡片态） —— */
   const myLikedIds = me
     ? new Set(
         (
@@ -87,7 +125,7 @@ export default async function ProfilePage({
             where: { userId: me.id, postId: { in: posts.map((p) => p.id) } },
             select: { postId: true },
           })
-        ).map((l) => l.postId)
+        ).map((l) => l.postId),
       )
     : new Set<number>();
   const myFavIds = me
@@ -97,7 +135,7 @@ export default async function ProfilePage({
             where: { userId: me.id, postId: { in: posts.map((p) => p.id) } },
             select: { postId: true },
           })
-        ).map((f) => f.postId)
+        ).map((f) => f.postId),
       )
     : new Set<number>();
 
@@ -108,97 +146,246 @@ export default async function ProfilePage({
     tagScene: p.tagScene,
     tagIndustry: p.tagIndustry,
     tagContent: (() => {
-      try {
-        return JSON.parse(p.tagContent || '[]');
-      } catch {
-        return [];
-      }
+      try { return JSON.parse(p.tagContent || '[]'); } catch { return []; }
     })(),
     tagSkill: p.tagSkill,
     createdAt: p.createdAt.toISOString(),
     author: { id: p.author.id, nickname: p.author.nickname, role: p.author.role },
-    counts: { comments: p._count.comments, likes: p._count.likes, attachments: p._count.attachments },
+    counts: {
+      comments: p._count.comments,
+      likes: p._count.likes,
+      attachments: p._count.attachments,
+    },
     liked: myLikedIds.has(p.id),
     favorited: myFavIds.has(p.id),
   }));
 
   return (
-    <div>
-      <header className="card mb-5 flex items-center gap-4 p-6">
-        <span className="grid h-16 w-16 place-content-center rounded-full bg-brand-600 text-xl font-bold text-white">
-          {user.nickname.slice(0, 1).toUpperCase()}
-        </span>
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            {user.nickname}
-            <span className={`chip ${roleColor(user.role)}`}>{user.role}</span>
-          </h1>
-          <p className="mt-1 text-sm text-ink-500">加入于 {formatTime(user.createdAt)}</p>
+    <div className="mx-auto max-w-prose">
+      {/* ============ 纹章 Hero ============ */}
+      <header className="relative border border-paper-edge bg-vellum rounded-md px-5 sm:px-8 py-8 sm:py-10 mb-10 text-center">
+        <CrestCorners className="m-2" />
+
+        <p className="font-display tracking-display text-[10px] text-sepia uppercase mb-4">
+          Collected Works
+        </p>
+
+        <div className="flex justify-center mb-5">
+          <RoleBadge role={user.role} size={68} />
         </div>
+
+        <h1 className="font-serif text-[26px] sm:text-[34px] leading-tight text-ink-brown break-all">
+          {user.nickname}
+        </h1>
+        <p className="font-serif italic text-leather mt-1.5">
+          {ROLE_FULL[user.role] ?? user.role}
+        </p>
+
+        {/* —— 关注按钮（仅他人主页可见） —— */}
+        {!isOwner && (
+          <div className="mt-5">
+            <FollowButton
+              userId={user.id}
+              initialFollowing={isFollowing}
+              isAuthed={!!me}
+            />
+          </div>
+        )}
+
+        <div className="mt-5 flex justify-center text-sepia">
+          <Ornament width={56} />
+        </div>
+
+        {/* —— 数据条 —— */}
+        <dl className="mt-5 flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2 font-sans text-xs text-sepia">
+          <Stat n={postCount} label="已发表卷" />
+          <Sep dot />
+          <Stat n={receivedLikes} label="受致意" />
+          <Sep dot />
+          <Stat n={followersCount} label="盟友" />
+          <Sep dot />
+          <Stat n={followingCount} label="所盟" />
+          {isOwner && (
+            <>
+              <Sep dot />
+              <Stat n={likeCount} label="我致意" />
+              <Sep dot />
+              <Stat n={favCount} label="封缄" />
+            </>
+          )}
+        </dl>
+
+        <p className="mt-3 font-serif italic text-xs text-sepia">
+          执笔自 {formatTime(user.createdAt)}
+        </p>
       </header>
 
-      <div className="card mb-5 flex border-b border-ink-300/60">
-        <TabLink href={`/profile/${id}?tab=posts`} active={tab === 'posts'} count={postCount}>
-          我的发布
+      {/* ============ Tab 切换 ============ */}
+      <nav className="flex justify-center items-baseline gap-0 mb-8 border-b border-paper-edge">
+        <TabLink href={`/profile/${id}?tab=posts`} active={tab === 'posts'} numeral={TAB_LABEL.posts.numeral} count={postCount}>
+          卷帙
         </TabLink>
         {isOwner && (
           <>
-            <TabLink href={`/profile/${id}?tab=likes`} active={tab === 'likes'} count={likeCount}>
-              我的点赞
+            <Sep />
+            <TabLink href={`/profile/${id}?tab=likes`} active={tab === 'likes'} numeral={TAB_LABEL.likes.numeral} count={likeCount}>
+              致意
             </TabLink>
-            <TabLink href={`/profile/${id}?tab=favorites`} active={tab === 'favorites'} count={favCount}>
-              我的收藏
+            <Sep />
+            <TabLink href={`/profile/${id}?tab=favorites`} active={tab === 'favorites'} numeral={TAB_LABEL.favorites.numeral} count={favCount}>
+              封缄
             </TabLink>
           </>
         )}
-      </div>
+      </nav>
 
+      {/* ============ 内容 ============ */}
       {items.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center p-12 text-center text-ink-500">
-          <span className="text-4xl">📭</span>
-          <p className="mt-3 text-sm">
-            {tab === 'posts' && '还没有发布内容'}
-            {tab === 'likes' && '还没有点赞过任何内容'}
-            {tab === 'favorites' && '收藏夹空空如也'}
-          </p>
-          {tab === 'posts' && isOwner && (
-            <Link href="/publish" className="btn-primary mt-4">
-              发布第一篇
-            </Link>
-          )}
-        </div>
+        <EmptyTab tab={tab} isOwner={isOwner} />
       ) : (
-        <div className="grid gap-3">
-          {items.map((p) => (
-            <PostCard key={p.id} post={p} currentUserId={me?.id ?? null} />
+        <ol className="space-y-5">
+          {items.map((p, idx) => (
+            <li key={p.id} className="relative">
+              <span
+                className="hidden lg:block absolute -left-12 top-7 font-display tracking-display text-xs text-sepia num-osf"
+                aria-hidden="true"
+              >
+                {String(idx + 1).padStart(2, '0')}
+              </span>
+              <PostCard post={p} currentUserId={me?.id ?? null} />
+            </li>
           ))}
-        </div>
+        </ol>
+      )}
+
+      {/* —— 尾部 —— */}
+      {items.length > 0 && (
+        <footer className="mt-12 text-center">
+          <div className="flex justify-center mb-3 text-leather">
+            <Ornament width={48} />
+          </div>
+          <p className="font-serif italic text-sm text-sepia">
+            本集至此 · 共 <span className="num-osf">{items.length}</span> 卷
+          </p>
+        </footer>
       )}
     </div>
   );
 }
 
+/* ============================================================
+   局部组件
+   ============================================================ */
 function TabLink({
   href,
   active,
+  numeral,
   count,
   children,
 }: {
   href: string;
   active: boolean;
+  numeral: string;
   count: number;
   children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className={`relative px-5 py-3 text-sm ${
-        active ? 'text-brand-600 font-semibold' : 'text-ink-700 hover:text-brand-600'
-      }`}
+      className={cn(
+        'relative inline-flex items-baseline gap-2 px-5 py-3 transition-colors',
+        active ? 'text-ink-brown' : 'text-sepia hover:text-leather',
+      )}
     >
-      {children}
-      <span className="ml-1 text-xs text-ink-500">({count})</span>
-      {active && <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-brand-600" />}
+      <span className="font-display tracking-display text-[11px]">{numeral}</span>
+      <span className="font-serif text-base">{children}</span>
+      <span className="font-sans text-[11px] text-sepia num-osf">
+        {count}
+      </span>
+      {active && (
+        <span className="absolute -bottom-px left-3 right-3 h-px bg-ink-brown" />
+      )}
     </Link>
+  );
+}
+
+function Sep({ dot }: { dot?: boolean } = {}) {
+  if (dot) return <span className="text-paper-edge select-none">·</span>;
+  return <span className="h-3 w-px bg-paper-edge" />;
+}
+
+function Stat({ n, label }: { n: number; label: string }) {
+  return (
+    <div className="inline-flex items-baseline gap-1.5">
+      <span className="num-osf font-serif text-base text-ink-brown">
+        {formatStatNumber(n)}
+      </span>
+      <span className="font-serif text-[11px] text-sepia">{label}</span>
+    </div>
+  );
+}
+
+function formatStatNumber(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}w`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+function EmptyTab({ tab, isOwner }: { tab: Tab; isOwner: boolean }) {
+  const COPY: Record<Tab, { line: string; sub: string; cta?: { href: string; label: string } }> = {
+    posts: {
+      line: isOwner ? '尚未落印任何一卷' : '此人尚未发表卷帙',
+      sub:  isOwner ? '提起墨笔，写下你想留给同行的内容' : '若你认识 ta，或许可以邀请 ta 撰写一卷',
+      cta:  isOwner ? { href: '/publish', label: '撰写第一卷' } : undefined,
+    },
+    likes: {
+      line: '尚未致意任何卷帙',
+      sub:  '看到值得点赞的内容，按下心形即可在此处汇集',
+    },
+    favorites: {
+      line: '封缄柜空无一物',
+      sub:  '将值得反复研读的卷帙封缄，便会在此处列出',
+    },
+  };
+  const c = COPY[tab];
+
+  return (
+    <div className="border border-paper-edge bg-vellum rounded-md py-14 px-8 text-center">
+      <div className="flex justify-center mb-5 text-paper-edge">
+        <BlankFolio />
+      </div>
+      <p className="font-serif italic text-leather text-lg mb-2">{c.line}</p>
+      <p className="font-sans text-sm text-sepia">{c.sub}</p>
+      {c.cta && (
+        <div className="mt-6">
+          <Link
+            href={c.cta.href}
+            className="inline-flex items-center h-9 px-4 bg-ink-brown text-vellum hover:bg-wax-red font-serif text-sm rounded-sm transition-colors"
+          >
+            {c.cta.label}
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 空白对开页 —— 两页相连的素描 */
+function BlankFolio() {
+  return (
+    <svg width="72" height="56" viewBox="0 0 72 56" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true">
+      <rect x="2" y="4" width="32" height="48" />
+      <rect x="38" y="4" width="32" height="48" />
+      {/* 中缝 */}
+      <path d="M34 4 V52" opacity="0.6" />
+      {/* 左页书脊三横线 */}
+      <path d="M6 14 H30" opacity="0.5" />
+      <path d="M6 18 H30" opacity="0.5" />
+      <path d="M6 22 H22" opacity="0.5" />
+      {/* 右页书脊三横线 */}
+      <path d="M42 14 H66" opacity="0.5" />
+      <path d="M42 18 H66" opacity="0.5" />
+      <path d="M42 22 H58" opacity="0.5" />
+    </svg>
   );
 }
