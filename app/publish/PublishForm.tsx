@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichEditor } from '@/components/RichEditor';
 import { AttachmentUploader, type UploadedFile } from '@/components/AttachmentUploader';
-import { SCENE_TAGS, INDUSTRY_TAGS, CONTENT_TAGS, SKILL_TAGS } from '@/lib/tags';
+import { SCENE_TAGS, INDUSTRY_TAGS, CONTENT_TAGS, SKILL_TAGS, ASSET_TYPE_HELPERS } from '@/lib/tags';
 
 export function PublishForm() {
   const router = useRouter();
@@ -21,6 +21,8 @@ export function PublishForm() {
   const [err, setErr] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const helpers = useMemo(() => ASSET_TYPE_HELPERS[assetType] ?? null, [assetType]);
+
   const toggleContent = (v: string) => {
     if (content.includes(v)) {
       setContent(content.filter((x) => x !== v));
@@ -33,11 +35,13 @@ export function PublishForm() {
     e.preventDefault();
     setErr('');
 
+    if (!assetType) return setErr('请选择 Skill 类型');
     if (title.trim().length < 5) return setErr('标题至少 5 字符');
     if (title.length > 100) return setErr('标题最多 100 字符');
     if (!body || body.replace(/<[^>]*>/g, '').trim().length === 0) return setErr('请输入正文');
-    if (!assetType) return setErr('请选择 Skill 类型');
     if (!scene) return setErr('请选择工作场景标签');
+
+    if (sourceUrl && !/^https?:\/\//.test(sourceUrl.trim())) return setErr('来源链接需以 http:// 或 https:// 开头');
 
     setSubmitting(true);
     const res = await fetch('/api/posts', {
@@ -70,19 +74,20 @@ export function PublishForm() {
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      {/* Asset Type Selection - Prominent */}
       <div className="card p-5">
         <label className="label">
           Skill 类型 <span className="text-red-500">*</span>
         </label>
-        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SKILL_TAGS.map((t) => (
             <button
               key={t.value}
               type="button"
               onClick={() => setAssetType(t.value)}
-              className={`rounded-md border px-3 py-2 text-left text-sm ${
+              className={`rounded-md border px-3 py-2.5 text-left text-sm transition ${
                 assetType === t.value
-                  ? 'border-brand-600 bg-brand-50 text-brand-700'
+                  ? 'border-brand-600 bg-brand-50 text-brand-700 ring-1 ring-brand-600'
                   : 'border-ink-300 hover:border-brand-500'
               }`}
             >
@@ -93,6 +98,7 @@ export function PublishForm() {
         </div>
       </div>
 
+      {/* Title */}
       <div className="card p-5">
         <label className="label">标题 <span className="text-red-500">*</span></label>
         <input
@@ -105,11 +111,18 @@ export function PublishForm() {
         <p className="mt-1 text-right text-xs text-ink-500">{title.length}/100</p>
       </div>
 
+      {/* Body */}
       <div className="card p-5">
         <label className="label">正文 <span className="text-red-500">*</span></label>
+        {helpers && (
+          <p className="mb-2 rounded-md bg-brand-50 px-3 py-2 text-xs leading-5 text-brand-700">
+            {helpers.body}
+          </p>
+        )}
         <RichEditor value={body} onChange={setBody} />
       </div>
 
+      {/* Tags */}
       <div className="card p-5">
         <h3 className="mb-3 text-sm font-semibold">分类标签</h3>
 
@@ -124,7 +137,7 @@ export function PublishForm() {
                 key={t.value}
                 type="button"
                 onClick={() => setScene(t.value)}
-                className={`rounded-md border px-3 py-2 text-left text-sm ${
+                className={`rounded-md border px-3 py-2 text-left text-sm transition ${
                   scene === t.value
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-ink-300 hover:border-brand-500'
@@ -153,7 +166,7 @@ export function PublishForm() {
           </div>
         </div>
 
-        <div className="mb-4">
+        <div>
           <label className="label">
             工作内容 <span className="ml-2 text-xs text-ink-500 font-normal">多选，最多 3 个</span>
           </label>
@@ -165,9 +178,9 @@ export function PublishForm() {
             ))}
           </div>
         </div>
-
       </div>
 
+      {/* Skill Asset Metadata */}
       <div className="card p-5">
         <h3 className="mb-3 text-sm font-semibold">Skill 资产信息</h3>
         <div className="grid gap-4">
@@ -182,6 +195,9 @@ export function PublishForm() {
           </div>
           <div>
             <label className="label">安装 / 使用前置说明</label>
+            {helpers && (
+              <p className="mb-1 text-xs text-ink-500">{helpers.installHint}</p>
+            )}
             <textarea
               className="input min-h-[80px]"
               placeholder="例如需要的工具、环境变量、文件放置位置等"
@@ -192,6 +208,9 @@ export function PublishForm() {
           </div>
           <div>
             <label className="label">适用场景 / 使用心得</label>
+            {helpers && (
+              <p className="mb-1 text-xs text-ink-500">{helpers.usageNotes}</p>
+            )}
             <textarea
               className="input min-h-[80px]"
               placeholder="说明这个资产适合谁、何时使用、有什么注意事项"
@@ -203,8 +222,16 @@ export function PublishForm() {
         </div>
       </div>
 
+      {/* Attachments */}
       <div className="card p-5">
         <h3 className="mb-3 text-sm font-semibold">附件</h3>
+        <p className="mb-3 text-xs text-ink-500">
+          {assetType === 'template'
+            ? '建议上传模板文件（Word / Excel / PPT / Markdown 等），方便他人直接使用。'
+            : assetType === 'api-script'
+            ? '建议将脚本文件作为附件上传，方便他人下载运行。'
+            : '上传相关的参考文件、模板或代码片段。'}
+        </p>
         <AttachmentUploader files={files} onChange={setFiles} />
       </div>
 

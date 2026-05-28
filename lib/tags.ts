@@ -77,3 +77,41 @@ export const roleColor = (role: string) => {
       return 'bg-ink-100 text-ink-700';
   }
 };
+
+export const ASSET_TYPE_HELPERS: Record<string, { body: string; installHint: string; usageNotes: string }> = {
+  prompt: {
+    body: '建议包含：Prompt 原文、输入示例、期望输出格式、适用场景说明。',
+    installHint: '说明使用这个 Prompt 需要的模型或工具（如 ChatGPT、Claude 等）。',
+    usageNotes: '说明这个 Prompt 适合谁使用、在什么场景下使用效果最好。',
+  },
+  'agent-skill': {
+    body: '建议包含：SKILL.md 全文或核心结构、安装步骤、使用方法。',
+    installHint: '提供 SKILL.md 的安装方式（如放置路径、Claude Code 命令等）。',
+    usageNotes: '说明这个 Agent Skill 的适用场景、注意事项和已知限制。',
+  },
+  workflow: {
+    body: '建议包含：完整工作流步骤、每步输入/输出、可复现的操作说明。',
+    installHint: '说明工作流中需要的工具、环境和前置条件。',
+    usageNotes: '说明这个 Workflow 适合的场景、预期产出和常见问题。',
+  },
+  'tool-stack': {
+    body: '建议包含：工具组合清单、每个工具的作用、组合使用的步骤。',
+    installHint: '列出所有工具的安装或注册方式。',
+    usageNotes: '说明这个工具组合适合谁、核心优势和替代方案。',
+  },
+  template: {
+    body: '建议包含：模板用途说明、使用步骤、填写要点。模板文件请作为附件上传。',
+    installHint: '说明模板格式（Word / Excel / PPT / Markdown 等）和打开方式。',
+    usageNotes: '说明模板适合的场景和自定义建议。',
+  },
+  'api-script': {
+    body: '建议包含：脚本用途、完整代码或核心逻辑、运行方式。',
+    installHint: '说明运行环境、依赖安装（如 pip install / npm install）和环境变量配置。',
+    usageNotes: '说明脚本的使用场景、输入输出格式和注意事项。',
+  },
+  'case-study': {
+    body: '建议包含：项目背景、方法论、完整步骤、结果和复盘总结。',
+    installHint: '说明复现这个案例需要的工具和数据。',
+    usageNotes: '说明这个案例的适用范围和可借鉴的要点。',
+  },
+};

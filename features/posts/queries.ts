@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { POST_STATUS } from '@/lib/status';
 import { postToDetailDto, postToListItemDto } from './mapper';
 import type { PostFilters } from './schemas';
 
@@ -30,7 +31,7 @@ function buildWhere(filters: PostFilters) {
     });
   }
 
-  return and.length > 0 ? { status: 'published', AND: and } : { status: 'published' };
+  return and.length > 0 ? { status: POST_STATUS.PUBLISHED, AND: and } : { status: POST_STATUS.PUBLISHED };
 }
 
 async function getViewerSets(userId: number | null, postIds: number[]) {
@@ -85,7 +86,7 @@ export async function getPostDetail(id: number, viewerId: number | null, increme
     },
   });
 
-  if (!post || post.status !== 'published') return null;
+  if (!post || post.status !== POST_STATUS.PUBLISHED) return null;
   if (incrementView) await prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
 
   const viewer = await getViewerSets(viewerId, [id]);
@@ -97,7 +98,7 @@ export async function listUserPosts(profileId: number, viewerId: number | null, 
 
   if (tab === 'posts') {
     posts = await prisma.post.findMany({
-      where: isOwner ? { userId: profileId } : { userId: profileId, status: 'published' },
+      where: isOwner ? { userId: profileId } : { userId: profileId, status: POST_STATUS.PUBLISHED },
       include: {
         author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
         skillAsset: true,
@@ -123,7 +124,7 @@ export async function listUserPosts(profileId: number, viewerId: number | null, 
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    posts = likes.filter((like) => like.post.status === 'published').map((like) => like.post);
+    posts = likes.filter((like) => like.post.status === POST_STATUS.PUBLISHED).map((like) => like.post);
   } else if (tab === 'favorites') {
     const favs = await prisma.postFavorite.findMany({
       where: { userId: profileId },
@@ -140,7 +141,7 @@ export async function listUserPosts(profileId: number, viewerId: number | null, 
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    posts = favs.filter((fav) => fav.post.status === 'published').map((fav) => fav.post);
+    posts = favs.filter((fav) => fav.post.status === POST_STATUS.PUBLISHED).map((fav) => fav.post);
   }
 
   const viewer = await getViewerSets(

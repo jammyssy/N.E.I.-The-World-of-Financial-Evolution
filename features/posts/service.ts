@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { POST_STATUS } from '@/lib/status';
 import { sanitizeHtml } from '@/lib/validate';
 import type { CreatePostInput } from './schemas';
 
@@ -11,7 +12,7 @@ export async function createSkillPost(userId: number, input: CreatePostInput) {
         userId,
         title: input.title,
         body: safeBody,
-        status: 'published',
+        status: POST_STATUS.PUBLISHED,
       },
     });
 

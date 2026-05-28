@@ -26,26 +26,53 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
 
   const hasActiveFilter =
     !!(filters.scene || filters.industry || filters.assetType || filters.role || filters.time || filters.content.length || filters.q);
-  const featuredCells = skillsMap.cells.filter((cell) => cell.count > 0).slice(0, 8);
 
   return (
     <div className="space-y-6">
+      {/* Hero: Product Identity */}
       <section className="rounded-lg border border-ink-300 bg-white p-6 shadow-card">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-brand-600">PEVC Skills Map</p>
-            <h1 className="mt-1 text-2xl font-bold text-ink-900">按投资工作流发现可复用技能资产</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-ink-900">PEVC Skills Map</h1>
+              <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">Community</span>
+            </div>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-700">
-              发现 Prompt、Workflow、Agent Skill、模板和脚本，并在每个技能下继续评论、收藏和沉淀实践反馈。
+              一级市场从业者的技能资产社区。按投资工作流发现 Prompt、Agent Skill、Workflow、模板和脚本，
+              并在每条资产下评论、收藏、下载和沉淀实践反馈。
             </p>
           </div>
-          <Link href="/skills-map" className="btn-primary w-full sm:w-auto">
-            打开 Skills Map
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/skills-map" className="btn-primary w-full sm:w-auto">
+              探索 Skills Map
+            </Link>
+            <Link href="/publish" className="btn-secondary w-full sm:w-auto">
+              发布 Skill Asset
+            </Link>
+          </div>
         </div>
 
+        {/* Quick stats */}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <div className="rounded-md border border-ink-300 px-3 py-1.5 text-sm">
+            <span className="font-semibold text-ink-900">{skillsMap.stats.totalAssets}</span>
+            <span className="ml-1 text-ink-500">Skill Assets</span>
+          </div>
+          <div className="rounded-md border border-ink-300 px-3 py-1.5 text-sm">
+            <span className="font-semibold text-ink-900">{skillsMap.stats.activeScenes}</span>
+            <span className="ml-1 text-ink-500">工作场景</span>
+          </div>
+          {skillsMap.stats.topAssetType && (
+            <div className="rounded-md border border-ink-300 px-3 py-1.5 text-sm">
+              <span className="text-ink-500">最多 </span>
+              <span className="font-semibold text-ink-900">{skillsMap.stats.topAssetType.label}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Featured cells */}
         <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredCells.map((cell) => (
+          {skillsMap.cells.filter((cell) => cell.count > 0).slice(0, 8).map((cell) => (
             <Link
               key={`${cell.scene}-${cell.assetType}`}
               href={`/?scene=${cell.scene}&assetType=${cell.assetType}`}
@@ -61,6 +88,7 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
         </div>
       </section>
 
+      {/* Feed */}
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <div>
           <div className="mb-3 flex items-baseline justify-between">
@@ -75,6 +103,7 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
             <div className="card flex flex-col items-center justify-center p-12 text-center text-ink-500">
               <span className="text-4xl">🗂️</span>
               <p className="mt-3 text-sm">暂无内容，调整筛选条件或发布第一条 Skill Asset</p>
+              <Link href="/publish" className="btn-primary mt-4">发布 Skill Asset</Link>
             </div>
           ) : (
             <div className="grid gap-3">
@@ -111,8 +140,8 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
             </ul>
           </div>
           <div className="card p-4 text-sm text-ink-700">
-            <h3 className="mb-2 font-semibold text-ink-900">当前底座</h3>
-            <p>Skill Asset 复用社区评论、点赞、收藏与附件能力，并通过四维标签进入 Skills Map。</p>
+            <h3 className="mb-2 font-semibold text-ink-900">关于平台</h3>
+            <p>PEVC Skills Map 是面向 VC / PE / FA 从业者的技能资产分享社区。每条资产都是围绕投资工作流的可复用单元。</p>
           </div>
         </aside>
       </div>

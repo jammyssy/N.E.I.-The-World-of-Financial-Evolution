@@ -15,12 +15,20 @@ export default async function PostDetailPage({ params }: { params: { id: string 
   const post = await getPostDetail(id, me?.id ?? null, true);
   if (!post) notFound();
 
+  const isAgentSkill = post.skillAsset?.assetType === 'agent-skill';
+  const isApiScript = post.skillAsset?.assetType === 'api-script';
+
   return (
     <article className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="space-y-5">
+        {/* Header */}
         <header className="card p-6">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            {post.skillAsset && <span className="chip-brand">{skillLabel(post.skillAsset.assetType)}</span>}
+            {post.skillAsset && (
+              <span className="rounded-md bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white">
+                {skillLabel(post.skillAsset.assetType)}
+              </span>
+            )}
             <span className="chip">{sceneLabel(post.tags.scene)}</span>
           </div>
           <h1 className="text-2xl font-bold leading-snug">{post.title}</h1>
@@ -60,15 +68,21 @@ export default async function PostDetailPage({ params }: { params: { id: string 
           </div>
         </header>
 
-        {post.skillAsset && (post.skillAsset.sourceUrl || post.skillAsset.installHint || post.skillAsset.usageNotes) && (
-          <section className="card p-6">
-            <h2 className="mb-3 text-base font-semibold">Skill 资产信息</h2>
+        {/* Skill Asset Panel */}
+        {post.skillAsset && (
+          <section className="rounded-lg border-2 border-brand-200 bg-brand-50/30 p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-base font-semibold text-ink-900">Skill 资产信息</h2>
+              <span className="rounded-md bg-brand-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                {skillLabel(post.skillAsset.assetType)}
+              </span>
+            </div>
             <dl className="space-y-3 text-sm">
               {post.skillAsset.sourceUrl && (
                 <div>
-                  <dt className="text-xs text-ink-500">来源链接</dt>
+                  <dt className="text-xs font-medium text-ink-500">来源链接</dt>
                   <dd>
-                    <a href={post.skillAsset.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
+                    <a href={post.skillAsset.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline break-all">
                       {post.skillAsset.sourceUrl}
                     </a>
                   </dd>
@@ -76,27 +90,42 @@ export default async function PostDetailPage({ params }: { params: { id: string 
               )}
               {post.skillAsset.installHint && (
                 <div>
-                  <dt className="text-xs text-ink-500">安装 / 使用前置说明</dt>
-                  <dd className="whitespace-pre-wrap text-ink-800">{post.skillAsset.installHint}</dd>
+                  <dt className="text-xs font-medium text-ink-500">
+                    {isAgentSkill ? 'SKILL.md 安装说明' : isApiScript ? '环境配置 & 安装' : '安装 / 使用前置说明'}
+                  </dt>
+                  <dd className={`whitespace-pre-wrap text-ink-800 ${isApiScript ? 'rounded-md bg-ink-900 p-3 font-mono text-sm text-green-400' : ''}`}>
+                    {post.skillAsset.installHint}
+                  </dd>
                 </div>
               )}
               {post.skillAsset.usageNotes && (
                 <div>
-                  <dt className="text-xs text-ink-500">适用场景 / 使用心得</dt>
-                  <dd className="whitespace-pre-wrap text-ink-800">{post.skillAsset.usageNotes}</dd>
+                  <dt className="text-xs font-medium text-ink-500">适用场景 / 使用心得</dt>
+                  <dd className={`whitespace-pre-wrap text-ink-800 ${isApiScript ? 'rounded-md bg-ink-900 p-3 font-mono text-sm text-green-400' : ''}`}>
+                    {post.skillAsset.usageNotes}
+                  </dd>
                 </div>
+              )}
+              {isAgentSkill && !post.skillAsset.installHint && (
+                <p className="text-xs text-ink-500">
+                  这是一个 Agent Skill 资产。SKILL.md 文件可从下方附件中下载，或通过来源链接获取。
+                </p>
               )}
             </dl>
           </section>
         )}
 
+        {/* Body */}
         <div className="card p-6">
           <div className="prose-post" dangerouslySetInnerHTML={{ __html: post.body ?? '' }} />
         </div>
 
+        {/* Attachments */}
         {post.attachments.length > 0 && (
           <section className="card p-6">
-            <h3 className="mb-3 text-base font-semibold">附件 ({post.attachments.length})</h3>
+            <h3 className="mb-3 text-base font-semibold">
+              {post.skillAsset?.assetType === 'template' ? '模板文件' : '资源文件'} ({post.attachments.length})
+            </h3>
             <ul className="divide-y divide-ink-300/60">
               {post.attachments.map((attachment) => (
                 <li key={attachment.id} className="flex items-center gap-3 py-3">
