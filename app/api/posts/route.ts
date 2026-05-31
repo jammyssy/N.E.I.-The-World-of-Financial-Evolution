@@ -4,7 +4,9 @@ import { getSessionUid } from '@/lib/session';
 import { sanitizeHtml, stripHtml } from '@/lib/validate';
 import { POST_STATUS } from '@/lib/status';
 import { SCENE_TAGS, INDUSTRY_TAGS, CONTENT_TAGS, SKILL_TAGS } from '@/lib/tags';
+import { buildFeedWhere, fetchUserLikeFav, filterByContent } from '@/lib/feed';
 
+// Used by POST handler for validation
 const sceneVals: string[] = SCENE_TAGS.map((t) => t.value);
 const industryVals: string[] = INDUSTRY_TAGS.map((t) => t.value);
 const contentVals: string[] = CONTENT_TAGS.map((t) => t.value);
@@ -23,63 +25,24 @@ export async function GET(req: Request) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
   const pageSize = 20;
 
-  const where: any = { status: POST_STATUS.PUBLISHED };
-  if (scene && sceneVals.includes(scene)) where.tagScene = scene;
-  if (industry && industryVals.includes(industry)) where.tagIndustry = industry;
-  if (skill && skillVals.includes(skill)) where.tagSkill = skill;
-  if (role && ['VC', 'PE', 'FA'].includes(role)) where.author = { role };
-
-  if (time) {
-    const days = time === '7d' ? 7 : time === '30d' ? 30 : time === '90d' ? 90 : 0;
-    if (days > 0) where.createdAt = { gte: new Date(Date.now() - days * 86400000) };
-  }
-
-  if (q) {
-    where.OR = [
-      { title: { contains: q } },
-      { body: { contains: q } },
-      { author: { nickname: { contains: q } } },
-    ];
-  }
+  const where = buildFeedWhere({ scene, industry, skill, role, time, q });
 
   let posts = await prisma.post.findMany({
     where,
     include: {
       author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
       _count: { select: { comments: true, likes: true, attachments: true } },
+      skillAsset: { select: { id: true, assetType: true } },
     },
     orderBy: { createdAt: 'desc' },
     skip: (page - 1) * pageSize,
     take: pageSize,
   });
 
-  // tag_content 多选过滤（DB 是 JSON 字符串，MVP 在内存过滤）
-  if (contentList.length > 0) {
-    const validContent = contentList.filter((c) => contentVals.includes(c));
-    if (validContent.length > 0) {
-      posts = posts.filter((p) => {
-        try {
-          const arr = JSON.parse(p.tagContent || '[]') as string[];
-          return validContent.every((v) => arr.includes(v));
-        } catch {
-          return false;
-        }
-      });
-    }
-  }
+  posts = filterByContent(posts, contentList);
 
   const uid = await getSessionUid();
-  let likedIds = new Set<number>();
-  let favIds = new Set<number>();
-  if (uid && posts.length > 0) {
-    const postIds = posts.map((p) => p.id);
-    const [likes, favs] = await Promise.all([
-      prisma.postLike.findMany({ where: { userId: uid, postId: { in: postIds } }, select: { postId: true } }),
-      prisma.postFavorite.findMany({ where: { userId: uid, postId: { in: postIds } }, select: { postId: true } }),
-    ]);
-    likedIds = new Set(likes.map((l) => l.postId));
-    favIds = new Set(favs.map((f) => f.postId));
-  }
+  const { likedIds, favIds } = await fetchUserLikeFav(uid, posts.map((p) => p.id));
 
   return NextResponse.json({
     items: posts.map((p) => ({
@@ -100,6 +63,9 @@ export async function GET(req: Request) {
       },
       liked: likedIds.has(p.id),
       favorited: favIds.has(p.id),
+      skillAsset: p.skillAsset
+        ? { id: p.skillAsset.id, assetType: p.skillAsset.assetType }
+        : null,
     })),
     page,
     hasMore: posts.length === pageSize,

@@ -81,6 +81,7 @@ export default async function ProfilePage({
       include: {
         author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
         _count: { select: { comments: true, likes: true, attachments: true } },
+        skillAsset: { select: { id: true, assetType: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
@@ -93,6 +94,7 @@ export default async function ProfilePage({
           include: {
             author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
             _count: { select: { comments: true, likes: true, attachments: true } },
+            skillAsset: { select: { id: true, assetType: true } },
           },
         },
       },
@@ -108,6 +110,7 @@ export default async function ProfilePage({
           include: {
             author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
             _count: { select: { comments: true, likes: true, attachments: true } },
+            skillAsset: { select: { id: true, assetType: true } },
           },
         },
       },
@@ -158,6 +161,9 @@ export default async function ProfilePage({
     },
     liked: myLikedIds.has(p.id),
     favorited: myFavIds.has(p.id),
+    skillAsset: p.skillAsset
+      ? { id: p.skillAsset.id, assetType: p.skillAsset.assetType }
+      : null,
   }));
 
   return (
