@@ -12,6 +12,7 @@ import {
   skillLabel,
 } from '@/lib/tags';
 import { RoleBadge } from '@/components/icons/RoleBadge';
+import { SkillIcon } from '@/components/icons/SkillIcon';
 import {
   SceneChip,
   IndustryChip,
@@ -32,6 +33,10 @@ export type PostCardData = {
   counts: { comments: number; likes: number; attachments: number };
   liked: boolean;
   favorited: boolean;
+  skillAsset: {
+    id: number;
+    assetType: string;
+  } | null;
 };
 
 /**
@@ -94,6 +99,14 @@ export function PostCard({
             'p-6 sm:p-7',
           )}
         >
+          {/* —— Skill 类型徽标 —— */}
+          {post.skillAsset && (
+            <div className="mb-2 flex items-center gap-1.5">
+              <SkillIcon skill={post.skillAsset.assetType} className="h-4 w-4 text-wax-red" />
+              <span className="text-xs font-semibold text-wax-red">{skillLabel(post.skillAsset.assetType)}</span>
+            </div>
+          )}
+
           {/* —— 作者条 —— */}
           <div className="flex items-center gap-2 mb-3 font-sans text-xs text-sepia">
             <RoleBadge role={post.author.role} size={16} />
