@@ -15,6 +15,7 @@ import {
   INDUSTRY_TAGS,
   CONTENT_TAGS,
   SKILL_TAGS,
+  ASSET_TYPE_HELPERS,
 } from '@/lib/tags';
 import { SkillIcon } from '@/components/icons/SkillIcon';
 
@@ -24,11 +25,14 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [assetType, setAssetType] = useState('');
   const [scene, setScene] = useState('');
   const [industry, setIndustry] = useState('');
   const [contents, setContents] = useState<string[]>([]);
-  const [skill, setSkill] = useState('');
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [installHint, setInstallHint] = useState('');
+  const [usageNotes, setUsageNotes] = useState('');
   const [err, setErr] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,14 +41,21 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
     else if (contents.length < 3) setContents([...contents, v]);
   };
 
+  const assetHelper = assetType ? ASSET_TYPE_HELPERS[assetType] : null;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
+
+    // Validation
+    if (!assetType) return setErr('请选择 Skill 类型');
     if (title.trim().length < 5) return setErr('标题至少 5 字符');
     if (title.length > 100) return setErr('标题最多 100 字符');
     if (!body || body.replace(/<[^>]*>/g, '').trim().length === 0)
       return setErr('请书写正文');
     if (!scene) return setErr('请为本卷指定工作场景');
+    if (sourceUrl.trim() && !/^https?:\/\/.+/.test(sourceUrl.trim()))
+      return setErr('来源链接须以 http:// 或 https:// 开头');
 
     setSubmitting(true);
     const res = await fetch('/api/posts', {
@@ -56,8 +67,11 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         tagScene: scene,
         tagIndustry: industry || null,
         tagContent: contents,
-        tagSkill: skill || null,
+        tagSkill: assetType,
         attachmentIds: files.map((f) => f.id),
+        sourceUrl: sourceUrl.trim() || null,
+        installHint: installHint.trim() || null,
+        usageNotes: usageNotes.trim() || null,
       }),
     });
     const data = await res.json();
@@ -69,6 +83,14 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
     router.push(`/posts/${data.id}`);
     router.refresh();
   };
+
+  // Attachment hint based on asset type
+  const attachmentHint = (() => {
+    if (!assetType) return '选填 · 最多 5 件 · 单件 ≤ 100 MB';
+    if (assetType === 'template') return '建议上传模板文件 · 最多 5 件 · 单件 ≤ 100 MB';
+    if (assetType === 'api-script') return '建议将脚本文件上传 · 最多 5 件 · 单件 ≤ 100 MB';
+    return '选填 · 最多 5 件 · 单件 ≤ 100 MB';
+  })();
 
   return (
     <form onSubmit={submit} className="space-y-section">
@@ -88,8 +110,26 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         </p>
       </div>
 
-      {/* ===== Section I · 标题 ===== */}
-      <Section numeral="I" title="标题" hint="5-100 字符 · 一句话概括所要传达">
+      {/* ===== Section I · Skill 类型 ===== */}
+      <Section numeral="I" title="Skill 类型" hint="必填 · 选择后将自动设置 Skill 标签">
+        <Dimension label="资产类型" required hint="单选 · 必填">
+          <ChipSet>
+            {SKILL_TAGS.map((t) => (
+              <BadgeChip
+                key={t.value}
+                active={assetType === t.value}
+                onClick={() => setAssetType(t.value)}
+                icon={<SkillIcon skill={t.value} size={11} />}
+              >
+                {t.label}
+              </BadgeChip>
+            ))}
+          </ChipSet>
+        </Dimension>
+      </Section>
+
+      {/* ===== Section II · 标题 + 正文 ===== */}
+      <Section numeral="II" title="标题" hint="5-100 字符 · 一句话概括所要传达">
         <input
           className={cn(
             'w-full bg-transparent border-0 border-b border-paper-edge',
@@ -107,13 +147,17 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         </p>
       </Section>
 
-      {/* ===== Section II · 正文 ===== */}
-      <Section numeral="II" title="正文" hint="衬线排版 · 可加粗 · 引文 · 列表 · 链接">
+      <Section numeral="II-a" title="正文" hint="衬线排版 · 可加粗 · 引文 · 列表 · 链接">
+        {assetHelper && (
+          <div className="bg-vellum/50 border border-paper-edge rounded px-3 py-2 text-xs text-leather mb-3">
+            {assetHelper.body}
+          </div>
+        )}
         <RichEditor value={body} onChange={setBody} placeholder="此处书写正文…" />
       </Section>
 
-      {/* ===== Section III · 四维标签 ===== */}
-      <Section numeral="III" title="四维标签" hint="为本卷打上分类印章，便于他人检索">
+      {/* ===== Section III · 分类标签 ===== */}
+      <Section numeral="III" title="分类标签" hint="为本卷打上分类印章，便于他人检索">
         {/* 工作场景 */}
         <Dimension label="工作场景" required hint="单选 · 必填">
           <ChipSet>
@@ -165,29 +209,72 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
             ))}
           </ChipSet>
         </Dimension>
+      </Section>
 
-        {/* Skill */}
-        <Dimension label="Skill 类型" hint="单选 · 选填">
-          <ChipSet>
-            <BadgeChip active={skill === ''} onClick={() => setSkill('')}>
-              不指定
-            </BadgeChip>
-            {SKILL_TAGS.map((t) => (
-              <BadgeChip
-                key={t.value}
-                active={skill === t.value}
-                onClick={() => setSkill(t.value)}
-                icon={<SkillIcon skill={t.value} size={11} />}
-              >
-                {t.label}
-              </BadgeChip>
-            ))}
-          </ChipSet>
+      {/* ===== Section IV · Skill 资产信息 ===== */}
+      <Section numeral="IV" title="Skill 资产信息" hint="选填 · 帮助他人快速上手使用">
+        {/* 来源链接 */}
+        <Dimension label="来源链接" hint="选填 · 原始出处或下载地址">
+          <input
+            type="url"
+            className={cn(
+              'w-full bg-transparent border border-paper-edge rounded px-3 py-2',
+              'font-sans text-sm text-ink-brown placeholder:text-sepia/60',
+              'focus:border-ink-brown focus:outline-none transition-colors',
+            )}
+            placeholder="https://example.com/..."
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+          />
+        </Dimension>
+
+        {/* 安装/使用说明 */}
+        <Dimension label="安装 / 使用说明" hint="选填 · 最多 2000 字符">
+          {assetHelper && (
+            <p className="mb-1.5 text-[10px] text-leather">{assetHelper.installHint}</p>
+          )}
+          <textarea
+            className={cn(
+              'w-full bg-transparent border border-paper-edge rounded px-3 py-2',
+              'font-sans text-sm text-ink-brown placeholder:text-sepia/60',
+              'focus:border-ink-brown focus:outline-none transition-colors',
+              'resize-y min-h-[80px]',
+            )}
+            placeholder="描述安装步骤或使用前提条件…"
+            maxLength={2000}
+            value={installHint}
+            onChange={(e) => setInstallHint(e.target.value)}
+          />
+          <p className="mt-1 font-sans text-[11px] text-sepia text-right num-osf">
+            {installHint.length}/2000
+          </p>
+        </Dimension>
+
+        {/* 适用场景 / 使用心得 */}
+        <Dimension label="适用场景 / 使用心得" hint="选填 · 最多 2000 字符">
+          {assetHelper && (
+            <p className="mb-1.5 text-[10px] text-leather">{assetHelper.usageNotes}</p>
+          )}
+          <textarea
+            className={cn(
+              'w-full bg-transparent border border-paper-edge rounded px-3 py-2',
+              'font-sans text-sm text-ink-brown placeholder:text-sepia/60',
+              'focus:border-ink-brown focus:outline-none transition-colors',
+              'resize-y min-h-[80px]',
+            )}
+            placeholder="描述适合的场景和使用经验…"
+            maxLength={2000}
+            value={usageNotes}
+            onChange={(e) => setUsageNotes(e.target.value)}
+          />
+          <p className="mt-1 font-sans text-[11px] text-sepia text-right num-osf">
+            {usageNotes.length}/2000
+          </p>
         </Dimension>
       </Section>
 
-      {/* ===== Section IV · 附件 ===== */}
-      <Section numeral="IV" title="附件" hint="选填 · 最多 5 件 · 单件 ≤ 100 MB">
+      {/* ===== Section V · 附件 ===== */}
+      <Section numeral="V" title="附件" hint={attachmentHint}>
         <AttachmentUploader files={files} onChange={setFiles} />
       </Section>
 
