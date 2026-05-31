@@ -16,7 +16,7 @@ export default function LoginPage() {
   const next = params.get('next') || '/';
 
   const [mode, setMode] = useState<Mode>('password');
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -28,10 +28,10 @@ export default function LoginPage() {
     setErr(null);
     setDevCode(null);
     setSending(true);
-    const res = await fetch('/api/sms/send', {
+    const res = await fetch('/api/auth/verify-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ email }),
     });
     const data = await res.json();
     setSending(false);
@@ -46,7 +46,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password, code, mode }),
+      body: JSON.stringify({ email, password, code, mode }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -83,17 +83,17 @@ export default function LoginPage() {
           </ModeTab>
           <span className="w-px h-4 bg-paper-edge" />
           <ModeTab active={mode === 'code'} onClick={() => setMode('code')}>
-            短信验证码
+            邮箱验证码
           </ModeTab>
         </div>
 
         <Input
-          label="手机号"
-          type="tel"
-          placeholder="11 位大陆手机号"
-          autoComplete="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value.trim())}
+          label="邮箱"
+          type="email"
+          placeholder="your@email.com"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value.trim())}
         />
 
         {mode === 'password' ? (
@@ -108,7 +108,7 @@ export default function LoginPage() {
         ) : (
           <div>
             <label className="mb-1.5 block font-serif text-sm text-ink-brown">
-              短信验证码
+              邮箱验证码
             </label>
             <div className="flex gap-2">
               <input
@@ -123,7 +123,7 @@ export default function LoginPage() {
                 variant="secondary"
                 size="md"
                 onClick={sendCode}
-                disabled={sending || !/^1[3-9]\d{9}$/.test(phone)}
+                disabled={sending || !email.includes('@')}
                 className="whitespace-nowrap"
               >
                 {sending ? '发送中…' : '获取验证码'}

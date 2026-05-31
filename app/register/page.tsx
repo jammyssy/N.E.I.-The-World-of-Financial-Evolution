@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn';
 
 type Role = 'VC' | 'PE' | 'FA';
 
-const STEPS = ['验证手机', '选择身份', '设定资料'];
+const STEPS = ['验证邮箱', '选择身份', '设定资料'];
 
 const ROLE_INFO: Record<Role, { en: string; tagline: string; desc: string }> = {
   VC: {
@@ -34,7 +34,7 @@ const ROLE_INFO: Record<Role, { en: string; tagline: string; desc: string }> = {
 export default function RegisterPage() {
   const router = useRouter();
   const [stepIdx, setStepIdx] = useState(1); // 1 / 2 / 3
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [role, setRole] = useState<Role | ''>('');
   const [nickname, setNickname] = useState('');
@@ -45,15 +45,15 @@ export default function RegisterPage() {
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  /* —— 发送短信 —— */
+  /* —— 发送验证码 —— */
   const sendCode = async () => {
     setErr(null);
     setDevCode(null);
     setSending(true);
-    const res = await fetch('/api/sms/send', {
+    const res = await fetch('/api/auth/verify-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ email }),
     });
     const data = await res.json();
     setSending(false);
@@ -65,12 +65,12 @@ export default function RegisterPage() {
   const goStep2 = (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null);
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setErr('请输入有效的 11 位大陆手机号');
+    if (!email.includes('@')) {
+      setErr('请输入有效的邮箱地址');
       return;
     }
     if (!/^\d{6}$/.test(code)) {
-      setErr('请输入 6 位短信验证码');
+      setErr('请输入 6 位邮箱验证码');
       return;
     }
     setStepIdx(2);
@@ -102,7 +102,7 @@ export default function RegisterPage() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code, role, nickname, password }),
+      body: JSON.stringify({ email, code, role, nickname, password }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -138,17 +138,17 @@ export default function RegisterPage() {
       {stepIdx === 1 && (
         <form onSubmit={goStep2} className="space-y-6">
           <Input
-            label="手机号"
-            type="tel"
-            placeholder="11 位大陆手机号"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.trim())}
+            label="邮箱"
+            type="email"
+            placeholder="your@email.com"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value.trim())}
           />
 
           <div>
             <label className="mb-1.5 block font-serif text-sm text-ink-brown">
-              短信验证码
+              邮箱验证码
             </label>
             <div className="flex gap-2">
               <input
@@ -162,7 +162,7 @@ export default function RegisterPage() {
                 type="button"
                 variant="secondary"
                 onClick={sendCode}
-                disabled={sending || !/^1[3-9]\d{9}$/.test(phone)}
+                disabled={sending || !email.includes('@')}
                 className="whitespace-nowrap"
               >
                 {sending ? '发送中…' : '获取验证码'}

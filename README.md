@@ -32,14 +32,14 @@ npm run dev
 
 ## 测试账号
 
-| 手机号 | 密码 | 身份 | 昵称 |
-|--------|------|------|------|
-| 13800138001 | password123 | VC | 清流VC合伙人 |
-| 13800138002 | password123 | PE | PE研究员小李 |
-| 13800138003 | password123 | FA | FA-王经理 |
-| 13800138004 | password123 | VC | AI赛道分析师 |
+| 邮箱 | 密码 | 身份 | 昵称 |
+|------|------|------|------|
+| vc@pevc.dev | password123 | VC | 清流VC合伙人 |
+| pe@pevc.dev | password123 | PE | PE研究员小李 |
+| fa@pevc.dev | password123 | FA | FA-王经理 |
+| vc2@pevc.dev | password123 | VC | AI赛道分析师 |
 
-**短信验证码（开发模式）：** 所有手机号通用 `123456`
+**邮箱验证码（开发模式）：** 所有邮箱通用 `123456`
 
 ## 已实现功能
 
@@ -61,8 +61,8 @@ npm run dev
 pevc-platform/
 ├── app/                        # Next.js App Router
 │   ├── api/                    # REST API 路由
-│   │   ├── auth/               # 注册 / 登录 / me / logout
-│   │   ├── sms/send/           # 短信验证码（dev 模式返回固定值）
+│   │   ├── auth/               # 注册 / 登录 / 邮箱验证码 / me / logout
+│   │   ├── sms/send/           # 邮箱验证码（dev 模式返回固定值）
 │   │   ├── posts/              # 内容 CRUD + 互动（点赞/收藏）
 │   │   ├── comments/           # 评论删除 / 点赞
 │   │   ├── upload/             # 附件上传 / 删除
@@ -128,7 +128,7 @@ pevc-platform/
 | PRD 要求 | V1.0 实现 | 后续 |
 |----------|-----------|------|
 | 内容审核 | 直接 published，POST_STATUS 常量已就位 | 管理后台 + pending 流转 |
-| 短信网关 | 固定验证码 `123456` | 接入短信服务商 |
+| 短信网关 | 固定验证码 `123456` | 接入邮件服务商 |
 | 文件存储 OSS | 本地 `uploads/` | OSS SDK + 签名 URL |
 | 全文检索 | LIKE 查询 | Elasticsearch |
 

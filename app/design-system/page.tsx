@@ -143,7 +143,7 @@ export default function DesignSystemPage() {
       {/* ========== 四、输入 ========== */}
       <Section index="IV" title="输入 · Form" subtitle="标签上方 · 衬线 · 左对齐">
         <div className="grid sm:grid-cols-2 gap-5">
-          <Input label="手机号" placeholder="11 位大陆手机号" />
+          <Input label="邮箱" placeholder="your@email.com" />
           <Input
             label="验证码"
             placeholder="6 位数字"
