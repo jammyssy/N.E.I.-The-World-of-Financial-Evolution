@@ -89,6 +89,7 @@ export function SiteHeader({ user }: { user: User }) {
           {/* 桌面：主导航 */}
           <nav className="hidden md:flex items-center gap-5 font-serif text-sm">
             <NavLink href="/" active={isActive('/')}>目录</NavLink>
+            <NavLink href="/skills-map" active={isActive('/skills-map')}>Skills Map</NavLink>
             <NavLink href="/search" active={isActive('/search')}>检索</NavLink>
             <NavLink href="/design-system" active={isActive('/design-system')}>
               设计系统
@@ -212,6 +213,7 @@ export function SiteHeader({ user }: { user: User }) {
             {/* 主导航 */}
             <nav className="space-y-3">
               <DrawerLink href="/" active={isActive('/')}>目录</DrawerLink>
+              <DrawerLink href="/skills-map" active={isActive('/skills-map')}>Skills Map</DrawerLink>
               <DrawerLink href="/search" active={isActive('/search')}>检索</DrawerLink>
               {user && (
                 <DrawerLink href="/publish" active={isActive('/publish')}>
