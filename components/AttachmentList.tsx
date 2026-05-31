@@ -19,10 +19,12 @@ export function AttachmentList({
   postId,
   attachments,
   isAuthed,
+  headerTitle = '附件',
 }: {
   postId: number;
   attachments: Attachment[];
   isAuthed: boolean;
+  headerTitle?: string;
 }) {
   if (!attachments.length) return null;
 
@@ -33,7 +35,7 @@ export function AttachmentList({
         <span className="font-display tracking-display text-xs text-sepia uppercase">
           Annex
         </span>
-        <h3 className="font-serif text-xl text-ink-brown">卷末附记 · 附件</h3>
+        <h3 className="font-serif text-xl text-ink-brown">卷末附记 · {headerTitle}</h3>
         <span className="font-serif italic text-sm text-sepia">
           共 <span className="num-osf">{attachments.length}</span> 件
         </span>
