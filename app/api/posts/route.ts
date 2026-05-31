@@ -120,6 +120,11 @@ export async function POST(req: Request) {
   const tagSkill = data.tagSkill ? String(data.tagSkill) : null;
   const attachmentIds: number[] = Array.isArray(data.attachmentIds) ? data.attachmentIds : [];
 
+  // SkillAsset fields
+  const sourceUrl = data.sourceUrl ? String(data.sourceUrl).trim() : null;
+  const installHint = data.installHint ? String(data.installHint).trim() : null;
+  const usageNotes = data.usageNotes ? String(data.usageNotes).trim() : null;
+
   if (title.length < 5 || title.length > 100) {
     return NextResponse.json({ error: '标题需 5-100 字符' }, { status: 400 });
   }
@@ -138,28 +143,55 @@ export async function POST(req: Request) {
   if (tagContentArr.length > 3) {
     return NextResponse.json({ error: '工作内容标签最多 3 个' }, { status: 400 });
   }
+  // Validate SkillAsset fields
+  if (sourceUrl && !/^https?:\/\/.+/.test(sourceUrl)) {
+    return NextResponse.json({ error: '来源链接须以 http:// 或 https:// 开头' }, { status: 400 });
+  }
+  if (installHint && installHint.length > 2000) {
+    return NextResponse.json({ error: '安装说明最多 2000 字符' }, { status: 400 });
+  }
+  if (usageNotes && usageNotes.length > 2000) {
+    return NextResponse.json({ error: '使用心得最多 2000 字符' }, { status: 400 });
+  }
+
   const cleanContent = tagContentArr.filter((c) => contentVals.includes(c));
 
   const safeBody = sanitizeHtml(body);
-  const post = await prisma.post.create({
-    data: {
-      userId: uid,
-      title,
-      body: safeBody,
-      tagScene,
-      tagIndustry,
-      tagContent: JSON.stringify(cleanContent),
-      tagSkill,
-      status: POST_STATUS.PUBLISHED, // MVP 跳过人工审核
-    },
-  });
 
-  if (attachmentIds.length > 0) {
-    await prisma.attachment.updateMany({
-      where: { id: { in: attachmentIds }, uploaderId: uid, postId: 0 },
-      data: { postId: post.id },
+  // Wrap Post + SkillAsset creation in a transaction
+  const post = await prisma.$transaction(async (tx) => {
+    const created = await tx.post.create({
+      data: {
+        userId: uid,
+        title,
+        body: safeBody,
+        tagScene,
+        tagIndustry,
+        tagContent: JSON.stringify(cleanContent),
+        tagSkill,
+        status: POST_STATUS.PUBLISHED, // MVP 跳过人工审核
+      },
     });
-  }
+
+    await tx.skillAsset.create({
+      data: {
+        postId: created.id,
+        assetType: tagSkill || 'prompt',
+        sourceUrl: sourceUrl || null,
+        installHint: installHint || null,
+        usageNotes: usageNotes || null,
+      },
+    });
+
+    if (attachmentIds.length > 0) {
+      await tx.attachment.updateMany({
+        where: { id: { in: attachmentIds }, uploaderId: uid, postId: 0 },
+        data: { postId: created.id },
+      });
+    }
+
+    return created;
+  });
 
   return NextResponse.json({ id: post.id });
 }
