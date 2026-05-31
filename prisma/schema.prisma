@@ -12,7 +12,7 @@ datasource db {
 // ---------- 用户 ----------
 model User {
   id           Int      @id @default(autoincrement())
-  phone        String   @unique
+  email        String   @unique
   nickname     String   @unique
   role         String   // VC / PE / FA
   passwordHash String
@@ -168,14 +168,14 @@ model PostFavorite {
   @@index([userId])
 }
 
-// ---------- 短信验证码（MVP 用 DB 模拟） ----------
-model SmsCode {
+// ---------- 邮箱验证码 ----------
+model VerificationCode {
   id        Int      @id @default(autoincrement())
-  phone     String
+  email     String
   code      String
   expiresAt DateTime
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@index([phone])
+  @@index([email])
 }
