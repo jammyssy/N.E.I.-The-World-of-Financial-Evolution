@@ -1,5 +1,6 @@
 export function formatCount(n: number): string {
-  if (n >= 1000) return '1k+';
+  if (n >= 10000) return `${Math.floor(n / 10000)}万+`;
+  if (n >= 1000) return `${Math.floor(n / 1000)}k+`;
   return String(n);
 }
 
