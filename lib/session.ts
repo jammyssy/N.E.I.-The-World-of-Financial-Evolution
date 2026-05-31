@@ -62,7 +62,7 @@ export async function getCurrentUser() {
     where: { id: uid },
     select: {
       id: true,
-      phone: true,
+      email: true,
       nickname: true,
       role: true,
       avatarUrl: true,

@@ -1,4 +1,5 @@
 export const isPhone = (v: string) => /^1[3-9]\d{9}$/.test(v);
+export const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 export const isNickname = (v: string) => v.length >= 2 && v.length <= 20 && !/[<>&"']/.test(v);
 export const isPassword = (v: string) =>
   v.length >= 8 && v.length <= 20 && /[A-Za-z]/.test(v) && /\d/.test(v);

@@ -14,23 +14,23 @@ async function main() {
   await prisma.skillAsset.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.post.deleteMany();
-  await prisma.smsCode.deleteMany();
+  await prisma.verificationCode.deleteMany();
   await prisma.user.deleteMany();
 
   const hash = await bcrypt.hash('password123', 10);
 
   const users = await Promise.all([
     prisma.user.create({
-      data: { phone: '13800138001', nickname: '清流VC合伙人', role: 'VC', passwordHash: hash },
+      data: { email: 'vc@pevc.dev', nickname: '清流VC合伙人', role: 'VC', passwordHash: hash },
     }),
     prisma.user.create({
-      data: { phone: '13800138002', nickname: 'PE研究员小李', role: 'PE', passwordHash: hash },
+      data: { email: 'pe@pevc.dev', nickname: 'PE研究员小李', role: 'PE', passwordHash: hash },
     }),
     prisma.user.create({
-      data: { phone: '13800138003', nickname: 'FA-王经理', role: 'FA', passwordHash: hash },
+      data: { email: 'fa@pevc.dev', nickname: 'FA-王经理', role: 'FA', passwordHash: hash },
     }),
     prisma.user.create({
-      data: { phone: '13800138004', nickname: 'AI赛道分析师', role: 'VC', passwordHash: hash },
+      data: { email: 'vc2@pevc.dev', nickname: 'AI赛道分析师', role: 'VC', passwordHash: hash },
     }),
   ]);
 
@@ -220,7 +220,7 @@ async function main() {
 
   console.log('✅ 已创建评论 / 点赞 / 收藏 演示数据');
   console.log('\n🎉 完成！可用测试账号：');
-  console.log('  手机 13800138001 (VC) / 13800138002 (PE) / 13800138003 (FA) / 13800138004 (VC)');
+  console.log('  邮箱 vc@pevc.dev (VC) / pe@pevc.dev (PE) / fa@pevc.dev (FA) / vc2@pevc.dev (VC)');
   console.log('  密码：password123');
 }
 
