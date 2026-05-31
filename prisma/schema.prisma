@@ -60,16 +60,34 @@ model Post {
   viewCount    Int      @default(0)
   commentCount Int      @default(0)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   author       User           @relation(fields: [userId], references: [id])
   comments     Comment[]
   attachments  Attachment[]
   likes        PostLike[]
   favorites    PostFavorite[]
+  skillAsset   SkillAsset?
 
   @@index([createdAt])
   @@index([tagScene])
   @@index([userId])
+}
+
+// ---------- Skill 资产 ----------
+model SkillAsset {
+  id          Int      @id @default(autoincrement())
+  postId      Int      @unique
+  assetType   String
+  sourceUrl   String?
+  installHint String?
+  usageNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([assetType])
 }
 
 // ---------- 附件 ----------
