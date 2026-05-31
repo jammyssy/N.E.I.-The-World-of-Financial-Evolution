@@ -9,6 +9,7 @@ import {
   skillLabel,
 } from '@/lib/tags';
 import { formatTime } from '@/lib/format';
+import { POST_STATUS } from '@/lib/status';
 import { RoleBadge } from '@/components/icons/RoleBadge';
 import { Ornament } from '@/components/icons/Ornament';
 import {
@@ -37,7 +38,7 @@ export default async function PostDetailPage({
       _count: { select: { comments: true, likes: true, favorites: true } },
     },
   });
-  if (!post || post.status !== 'published') notFound();
+  if (!post || post.status !== POST_STATUS.PUBLISHED) notFound();
 
   // 仅在初次渲染累加阅读 —— 不要 race
   await prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });

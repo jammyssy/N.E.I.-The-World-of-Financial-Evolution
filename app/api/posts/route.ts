@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSessionUid } from '@/lib/session';
 import { sanitizeHtml, stripHtml } from '@/lib/validate';
+import { POST_STATUS } from '@/lib/status';
 import { SCENE_TAGS, INDUSTRY_TAGS, CONTENT_TAGS, SKILL_TAGS } from '@/lib/tags';
 
 const sceneVals: string[] = SCENE_TAGS.map((t) => t.value);
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
   const pageSize = 20;
 
-  const where: any = { status: 'published' };
+  const where: any = { status: POST_STATUS.PUBLISHED };
   if (scene && sceneVals.includes(scene)) where.tagScene = scene;
   if (industry && industryVals.includes(industry)) where.tagIndustry = industry;
   if (skill && skillVals.includes(skill)) where.tagSkill = skill;
@@ -149,7 +150,7 @@ export async function POST(req: Request) {
       tagIndustry,
       tagContent: JSON.stringify(cleanContent),
       tagSkill,
-      status: 'published', // MVP 跳过人工审核
+      status: POST_STATUS.PUBLISHED, // MVP 跳过人工审核
     },
   });
 

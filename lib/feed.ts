@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { stripHtml } from '@/lib/validate';
+import { POST_STATUS } from '@/lib/status';
 import {
   SCENE_TAGS,
   INDUSTRY_TAGS,
@@ -49,7 +50,7 @@ export function parseFeedQuery(searchParams: { [k: string]: string | string[] | 
 export async function fetchFeed(query: FeedQuery, uid: number | null): Promise<PostCardData[]> {
   const { scene, industry, skill, role, time, q, contentList = [], limit = 50 } = query;
 
-  const where: any = { status: 'published' };
+  const where: any = { status: POST_STATUS.PUBLISHED };
   if (scene && sceneVals.includes(scene)) where.tagScene = scene;
   if (industry && industryVals.includes(industry)) where.tagIndustry = industry;
   if (skill && skillVals.includes(skill)) where.tagSkill = skill;
