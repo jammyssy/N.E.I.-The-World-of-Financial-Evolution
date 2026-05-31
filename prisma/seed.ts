@@ -11,6 +11,7 @@ async function main() {
   await prisma.comment.deleteMany();
   await prisma.postLike.deleteMany();
   await prisma.postFavorite.deleteMany();
+  await prisma.skillAsset.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.post.deleteMany();
   await prisma.smsCode.deleteMany();
@@ -55,6 +56,9 @@ async function main() {
         tagContent: JSON.stringify(['risk-id', 'memo']),
         tagSkill: 'workflow',
         status: 'published',
+        skillAsset: {
+          create: { assetType: 'workflow' },
+        },
       },
     }),
     prisma.post.create({
@@ -74,6 +78,9 @@ async function main() {
         tagContent: JSON.stringify(['data-clean']),
         tagSkill: 'template',
         status: 'published',
+        skillAsset: {
+          create: { assetType: 'template' },
+        },
       },
     }),
     prisma.post.create({
@@ -91,6 +98,9 @@ async function main() {
         tagContent: JSON.stringify(['memo', 'report-gen']),
         tagSkill: 'prompt',
         status: 'published',
+        skillAsset: {
+          create: { assetType: 'prompt' },
+        },
       },
     }),
     prisma.post.create({
@@ -107,6 +117,9 @@ async function main() {
         tagContent: JSON.stringify(['doc-parse']),
         tagSkill: 'template',
         status: 'published',
+        skillAsset: {
+          create: { assetType: 'template' },
+        },
       },
     }),
     prisma.post.create({
@@ -122,6 +135,9 @@ async function main() {
         tagContent: JSON.stringify(['automation', 'report-gen', 'info-gather']),
         tagSkill: 'agent-skill',
         status: 'published',
+        skillAsset: {
+          create: { assetType: 'agent-skill' },
+        },
       },
     }),
     prisma.post.create({
@@ -137,6 +153,9 @@ async function main() {
         tagContent: JSON.stringify(['memo']),
         tagSkill: 'template',
         status: 'published',
+        skillAsset: {
+          create: { assetType: 'template' },
+        },
       },
     }),
   ]);
