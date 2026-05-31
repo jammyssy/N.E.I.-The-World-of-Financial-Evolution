@@ -17,7 +17,7 @@ export function sanitizeHtml(html: string): string {
     .replace(/\son\w+="[^"]*"/gi, '')
     .replace(/\son\w+='[^']*'/gi, '')
     .replace(/javascript:/gi, '')
-    .replace(/<(?!\/?(?:${ALLOWED.join('|')})\b)[^>]*>/gi, '');
+    .replace(new RegExp(`<(?!\\/?(?:${ALLOWED.join('|')})\\b)[^>]*>`, 'gi'), '');
 }
 
 export function stripHtml(html: string): string {
