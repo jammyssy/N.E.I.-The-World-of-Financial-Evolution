@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     await prisma.verificationCode.update({ where: { id: verificationCode.id }, data: { consumed: true } });
   } else {
     if (!isPassword(password)) return NextResponse.json({ error: '密码格式不正确' }, { status: 400 });
+    if (!user.passwordHash) return NextResponse.json({ error: '该账号未设置密码，请使用其他方式登录' }, { status: 400 });
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return NextResponse.json({ error: '邮箱或密码错误' }, { status: 401 });
   }
