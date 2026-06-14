@@ -26,17 +26,23 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
       {/* —— 小目录头（压缩版 Hero）—— */}
       <header className="flex items-end justify-between gap-4 pt-6 pb-5 border-b border-paper-edge">
         <div className="min-w-0">
-          <div className="flex items-baseline gap-2 mb-1">
-            <p className="font-display tracking-display text-[11px] text-sepia uppercase">
-              PEVC Skill 档案馆
-            </p>
-            <span className="font-sans text-[11px] text-sepia">
-              已收录 <span className="num-osf text-ink-brown font-medium">{totalSkills}</span> 个 Skill
+          <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-1.5">
+            PEVC Skill 档案馆
+          </p>
+          <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+            <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown">
+              发现能用的 Skill
+            </h1>
+            {/* 已收录计数 · 蜡封徽章 */}
+            <span className="inline-flex items-baseline gap-1 h-7 px-2.5 border border-wax-red/40 bg-wax-red/5 rounded-sm">
+              <span className="num-osf font-serif text-base text-wax-red font-semibold leading-none">
+                {totalSkills}
+              </span>
+              <span className="font-sans text-[10px] text-wax-red/80 uppercase tracking-wide leading-none">
+                Skills 已收录
+              </span>
             </span>
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown mb-1">
-            发现能用的 Skill
-          </h1>
           <p className="font-serif italic text-sm text-leather line-clamp-1">
             PE/VC/FA 从业者的 AI 提示词、模板、工作流 · 找到就能直接用
           </p>
