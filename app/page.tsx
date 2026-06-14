@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { POST_STATUS } from '@/lib/status';
 import { STAGE_GROUPS } from '@/lib/tags';
 import { PostCard, type PostCardData } from '@/components/PostCard';
+import { StageGroup } from '@/components/StageGroup';
 import { FilterStrip } from '@/components/FilterStrip';
 
 type SP = { [k: string]: string | string[] | undefined };
@@ -68,19 +69,15 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
         {items.length === 0 ? (
           <EmptyState query={query} />
         ) : groupedStages.length > 0 ? (
-          // 不筛选：按投资流程阶段分组
+          // 不筛选：按投资流程阶段分组，每组最多9个，超出折叠
           <div className="space-y-10">
             {groupedStages.map((stage) => (
-              <div key={stage.value}>
-                <div className="flex items-baseline gap-3 mb-4">
-                  <h2 className="font-serif text-xl text-ink-brown">{stage.label}</h2>
-                  <span className="font-mono text-[11px] text-sepia">
-                    {stage.items.length}
-                  </span>
-                  <span className="flex-1 h-px bg-paper-edge" />
-                </div>
-                <PostGrid items={stage.items} uid={uid} />
-              </div>
+              <StageGroup
+                key={stage.value}
+                label={stage.label}
+                items={stage.items}
+                uid={uid}
+              />
             ))}
           </div>
         ) : (
