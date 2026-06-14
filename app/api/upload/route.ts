@@ -30,10 +30,10 @@ export async function POST(req: Request) {
   const buf = Buffer.from(await file.arrayBuffer());
   const key = await saveBuffer(buf, file.name);
 
-  // 用 postId=0 表示尚未关联到帖子（发布时再回填）
+  // 用 postId=null 表示尚未关联到帖子（发布时再回填）
   const att = await prisma.attachment.create({
     data: {
-      postId: 0,
+      postId: null,
       uploaderId: uid,
       fileName: file.name,
       storageKey: key,

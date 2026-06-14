@@ -64,3 +64,35 @@ export async function fetchGitHubProfile(accessToken: string): Promise<GitHubPro
 
   return (await res.json()) as GitHubProfile;
 }
+
+/**
+ * Fetch the user's primary, verified email via the /user/emails endpoint.
+ *
+ * The public profile (`/user`) only returns an email when the user has chosen
+ * to display a public email — many do not. Without this fallback we'd be
+ * forced to store a fake `@github.placeholder` address, which then breaks
+ * email-code login for that user. Returns null if no usable email is found.
+ */
+export async function fetchGitHubPrimaryEmail(accessToken: string): Promise<string | null> {
+  const res = await fetch('https://api.github.com/user/emails', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
+  if (!res.ok) return null;
+
+  const emails = (await res.json()) as Array<{
+    email: string;
+    primary: boolean;
+    verified: boolean;
+  }>;
+
+  // 优先：已验证的主邮箱；其次：任意已验证邮箱；最后：任意主邮箱
+  const verifiedPrimary = emails.find((e) => e.primary && e.verified);
+  if (verifiedPrimary) return verifiedPrimary.email;
+  const anyVerified = emails.find((e) => e.verified);
+  if (anyVerified) return anyVerified.email;
+  const anyPrimary = emails.find((e) => e.primary);
+  return anyPrimary?.email ?? null;
+}

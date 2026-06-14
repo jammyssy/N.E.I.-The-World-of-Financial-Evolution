@@ -27,5 +27,9 @@ export async function POST(req: Request) {
     console.error('Failed to send verification email:', err);
   }
 
+  // 仅在开发环境返回验证码，方便本地测试；生产环境绝不暴露，否则邮箱验证形同虚设
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ ok: true });
+  }
   return NextResponse.json({ ok: true, devCode: code });
 }

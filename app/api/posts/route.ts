@@ -151,7 +151,7 @@ export async function POST(req: Request) {
 
     if (attachmentIds.length > 0) {
       await tx.attachment.updateMany({
-        where: { id: { in: attachmentIds }, uploaderId: uid, postId: 0 },
+        where: { id: { in: attachmentIds }, uploaderId: uid, postId: null },
         data: { postId: created.id },
       });
     }

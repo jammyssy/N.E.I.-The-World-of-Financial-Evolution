@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForToken, fetchGitHubProfile } from '@/lib/github-oauth';
+import {
+  exchangeCodeForToken,
+  fetchGitHubProfile,
+  fetchGitHubPrimaryEmail,
+} from '@/lib/github-oauth';
 import { prisma } from '@/lib/db';
 import { setSession } from '@/lib/session';
 
@@ -26,7 +30,13 @@ export async function GET(req: NextRequest) {
     const githubId = String(ghProfile.id);
     const githubUsername = ghProfile.login;
     const githubAvatarUrl = ghProfile.avatar_url;
-    const githubEmail = ghProfile.email;
+
+    // 公开 profile 的 email 多数为 null —— 用 /user/emails 兜底拿真实主邮箱，
+    // 避免存假邮箱导致该用户日后无法用邮箱验证码登录。
+    let githubEmail = ghProfile.email;
+    if (!githubEmail) {
+      githubEmail = await fetchGitHubPrimaryEmail(accessToken);
+    }
 
     // 3. Try to find existing user by githubId
     let user = await prisma.user.findUnique({ where: { githubId } });
@@ -53,9 +63,13 @@ export async function GET(req: NextRequest) {
         // 5. Create a brand-new user via GitHub
         const nickname = await generateUniqueNickname(githubUsername);
 
+        // 极少数情况：用户连 /user/emails 都没返回可用邮箱。
+        // 用带 githubId 的占位邮箱满足 @unique 约束；这类用户只能走 GitHub 登录。
+        const fallbackEmail = `${githubUsername}-${githubId}@github.placeholder`;
+
         user = await prisma.user.create({
           data: {
-            email: githubEmail || `${githubUsername}@github.placeholder`,
+            email: githubEmail || fallbackEmail,
             nickname,
             role: 'VC',
             passwordHash: null,

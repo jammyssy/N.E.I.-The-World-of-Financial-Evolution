@@ -13,7 +13,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   if (!att || att.uploaderId !== uid) {
     return NextResponse.json({ error: '无权限' }, { status: 403 });
   }
-  if (att.postId !== 0) {
+  if (att.postId !== null) {
     return NextResponse.json({ error: '已发布的附件请通过编辑帖子删除' }, { status: 400 });
   }
 

@@ -96,7 +96,7 @@ model SkillAsset {
 // ---------- 附件 ----------
 model Attachment {
   id            Int      @id @default(autoincrement())
-  postId        Int
+  postId        Int?     // 上传时尚未关联帖子 → null，发帖成功后回填
   uploaderId    Int
   fileName      String
   storageKey    String   // 本地路径 / OSS key
@@ -105,7 +105,7 @@ model Attachment {
   downloadCount Int      @default(0)
   createdAt     DateTime @default(now())
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
 }

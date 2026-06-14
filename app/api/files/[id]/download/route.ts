@@ -9,7 +9,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const id = parseInt(params.id, 10);
   const att = await prisma.attachment.findUnique({ where: { id } });
-  if (!att || att.postId === 0) {
+  if (!att || !att.postId) {
     return NextResponse.json({ error: '文件不存在' }, { status: 404 });
   }
 
