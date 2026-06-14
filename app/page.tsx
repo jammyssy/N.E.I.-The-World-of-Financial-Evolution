@@ -29,11 +29,11 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
           <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-1.5">
             PEVC Skill 档案馆
           </p>
-          <div className="flex items-baseline gap-3 mb-1.5 flex-wrap">
+          <div className="flex flex-col gap-1.5 mb-1.5">
             <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown">
               发现能用的 Skill
             </h1>
-            <p className="font-serif text-3xl sm:text-4xl">
+            <p className="font-serif text-2xl sm:text-3xl">
               <span className="num-osf text-wax-red">{totalSkills}</span>
               <span className="text-ink-brown"> 个已收录</span>
             </p>
