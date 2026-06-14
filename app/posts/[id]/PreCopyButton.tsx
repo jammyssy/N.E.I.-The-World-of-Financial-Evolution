@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 
 /**
@@ -24,17 +23,13 @@ export function PreCopyButton({
   postId: number;
   isAuthed: boolean;
 }) {
-  const router = useRouter();
   const [copied, setCopied] = useState(false);
 
   // 没有 <pre> 就不渲染
   if (!/<pre[\s>]/i.test(bodyHtml)) return null;
 
   const handleCopy = async () => {
-    if (!isAuthed) {
-      router.push(`/login?next=/posts/${postId}`);
-      return;
-    }
+    // 复制免费开放：不要求登录。
     const preMatch = bodyHtml.match(/<pre[\s\S]*?>([\s\S]*?)<\/pre>/i);
     const raw = preMatch ? preMatch[1] : bodyHtml;
     const text = raw
@@ -93,7 +88,7 @@ export function PreCopyButton({
             <rect x="3.5" y="3.5" width="6" height="6" rx="0.5" />
             <path d="M2 7.5 V2 H7.5" strokeLinecap="round" />
           </svg>
-          {isAuthed ? '复制' : '登录后复制'}
+          复制
         </>
       )}
     </button>

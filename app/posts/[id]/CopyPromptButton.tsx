@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 
 /**
@@ -23,14 +22,10 @@ export function CopyPromptButton({
   postId: number;
   isAuthed: boolean;
 }) {
-  const router = useRouter();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    if (!isAuthed) {
-      router.push(`/login?next=/posts/${postId}`);
-      return;
-    }
+    // 复制免费开放：不要求登录。
     // 提取要复制的纯文本：
     // - 如果 body 里有 <pre>（长介绍 + Prompt 的结构），优先只复制 <pre> 内容（精准复制 Prompt）
     // - 否则把整个 body 剥成纯文本（纯提示词帖，整个 body 是 <pre> 的兼容）
@@ -91,7 +86,7 @@ export function CopyPromptButton({
             <rect x="3.5" y="3.5" width="6" height="6" rx="0.5" />
             <path d="M2 7.5 V2 H7.5" strokeLinecap="round" />
           </svg>
-          {isAuthed ? '复制提示词' : '登录后复制'}
+          复制提示词
         </>
       )}
     </button>

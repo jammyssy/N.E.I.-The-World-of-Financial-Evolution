@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { CopyPromptButton } from './CopyPromptButton';
 import { formatCount } from '@/lib/format';
@@ -76,21 +75,8 @@ function DownloadButton({
   attachmentId: number;
   fileName: string;
 }) {
-  const router = useRouter();
+  // 下载免费开放：不要求登录。
   const label = fileName.length > 28 ? fileName.slice(0, 25) + '…' : fileName;
-
-  if (!isAuthed) {
-    return (
-      <button
-        type="button"
-        onClick={() => router.push(`/login?next=/posts/${postId}`)}
-        className="inline-flex items-center gap-2 h-10 px-5 bg-ink-brown text-vellum hover:bg-wax-red font-serif text-sm rounded-sm transition-colors"
-      >
-        <DownloadIcon />
-        登录后下载
-      </button>
-    );
-  }
 
   return (
     <a

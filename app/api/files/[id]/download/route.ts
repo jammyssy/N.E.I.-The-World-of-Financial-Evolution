@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getSessionUid } from '@/lib/session';
 import { readFileByKey } from '@/lib/storage';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const uid = await getSessionUid();
-  if (!uid) return NextResponse.json({ error: '请先登录' }, { status: 401 });
-
+  // 开放下载：不要求登录。看全文 + 下载 + 复制都免费，
+  // 登录只留给「想说话/想贡献」的人（发帖/评论/点赞）。
   const id = parseInt(params.id, 10);
   const att = await prisma.attachment.findUnique({ where: { id } });
   if (!att || !att.postId) {

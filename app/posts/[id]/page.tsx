@@ -280,12 +280,7 @@ export default async function PostDetailPage({
               </p>
               <ul className="space-y-1.5">
                 {restAttachments.map((a) => (
-                  <RestFile
-                    key={a.id}
-                    postId={post.id}
-                    attachment={a}
-                    isAuthed={!!uid}
-                  />
+                  <RestFile key={a.id} attachment={a} />
                 ))}
               </ul>
             </div>
@@ -339,13 +334,9 @@ function TagChip({
 
 /** 右栏其余附件项（带下载） */
 function RestFile({
-  postId,
   attachment,
-  isAuthed,
 }: {
-  postId: number;
   attachment: { id: number; fileName: string; fileSize: number };
-  isAuthed: boolean;
 }) {
   const ext = (attachment.fileName.split('.').pop() ?? '?').toUpperCase();
   return (
@@ -357,22 +348,13 @@ function RestFile({
         {attachment.fileName}
       </span>
       <span className="font-mono text-[10px] text-sepia shrink-0">{formatBytes(attachment.fileSize)}</span>
-      {isAuthed ? (
-        <a
-          href={`/api/files/${attachment.id}/download`}
-          download
-          className="font-sans text-[11px] text-wax-red hover:underline shrink-0"
-        >
-          下载
-        </a>
-      ) : (
-        <Link
-          href={`/login?next=/posts/${postId}`}
-          className="font-sans text-[11px] text-sepia hover:text-ink-brown shrink-0"
-        >
-          登录
-        </Link>
-      )}
+      <a
+        href={`/api/files/${attachment.id}/download`}
+        download
+        className="font-sans text-[11px] text-wax-red hover:underline shrink-0"
+      >
+        下载
+      </a>
     </li>
   );
 }
