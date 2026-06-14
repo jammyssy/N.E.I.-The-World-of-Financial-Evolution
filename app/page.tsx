@@ -3,7 +3,8 @@ import { getSessionUid } from '@/lib/session';
 import { fetchFeed, hasAnyFilter, parseFeedQuery } from '@/lib/feed';
 import { prisma } from '@/lib/db';
 import { POST_STATUS } from '@/lib/status';
-import { PostCard } from '@/components/PostCard';
+import { STAGE_GROUPS } from '@/lib/tags';
+import { PostCard, type PostCardData } from '@/components/PostCard';
 import { FilterStrip } from '@/components/FilterStrip';
 
 type SP = { [k: string]: string | string[] | undefined };
@@ -20,6 +21,15 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
     }),
   ]);
   const hasFilter = hasAnyFilter(query);
+
+  // 不筛选时：把内容按投资流程阶段分组（空组过滤掉）
+  // 筛选时：保持单一 grid，让筛选结果连续呈现
+  const groupedStages = !hasFilter
+    ? STAGE_GROUPS.map((stage) => ({
+        ...stage,
+        items: items.filter((p) => (stage.scenes as readonly string[]).includes(p.tagScene)),
+      })).filter((s) => s.items.length > 0)
+    : [];
 
   return (
     <div className="mx-auto max-w-page px-4 sm:px-6">
@@ -53,18 +63,29 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
       {/* —— 分类条（目录头条）—— */}
       <FilterStrip />
 
-      {/* —— Feed 网格 —— */}
+      {/* —— Feed —— */}
       <section>
         {items.length === 0 ? (
           <EmptyState filtered={hasFilter} />
-        ) : (
-          <ol className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {items.map((p) => (
-              <li key={p.id}>
-                <PostCard post={p} currentUserId={uid} variant="compact" />
-              </li>
+        ) : groupedStages.length > 0 ? (
+          // 不筛选：按投资流程阶段分组
+          <div className="space-y-10">
+            {groupedStages.map((stage) => (
+              <div key={stage.value}>
+                <div className="flex items-baseline gap-3 mb-4">
+                  <h2 className="font-serif text-xl text-ink-brown">{stage.label}</h2>
+                  <span className="font-mono text-[11px] text-sepia">
+                    {stage.items.length}
+                  </span>
+                  <span className="flex-1 h-px bg-paper-edge" />
+                </div>
+                <PostGrid items={stage.items} uid={uid} />
+              </div>
             ))}
-          </ol>
+          </div>
+        ) : (
+          // 筛选时：单一 grid，结果连续呈现
+          <PostGrid items={items} uid={uid} />
         )}
 
         {items.length > 0 && (
@@ -76,6 +97,19 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
         )}
       </section>
     </div>
+  );
+}
+
+/** Feed 卡片网格（阶段组内 + 筛选结果共用） */
+function PostGrid({ items, uid }: { items: PostCardData[]; uid: number | null }) {
+  return (
+    <ol className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {items.map((p) => (
+        <li key={p.id}>
+          <PostCard post={p} currentUserId={uid} variant="compact" />
+        </li>
+      ))}
+    </ol>
   );
 }
 

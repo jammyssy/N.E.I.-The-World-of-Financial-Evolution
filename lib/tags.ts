@@ -57,6 +57,30 @@ export const ROLE_TAGS = [
   { value: 'FA', label: 'FA', desc: '财务顾问 / 中介机构从业者' },
 ] as const;
 
+/**
+ * 首页「不筛选时」按投资流程阶段分组展示。
+ * 把 10 个工作场景归并成 3 大阶段，呼应 PEVC 从业者的工作心智，
+ * 也避免稀疏场景（只有 1-2 条）单独成组显得单薄。
+ */
+export const STAGE_GROUPS = [
+  {
+    value: 'pre-deal',
+    label: '投前 · 发现与判断',
+    scenes: ['sourcing', 'screening', 'industry-research', 'business-dd'],
+  },
+  {
+    value: 'deal',
+    label: '决策 · 建模与交易',
+    scenes: ['financial', 'legal', 'ic', 'fundraising'],
+  },
+  {
+    value: 'post-deal',
+    label: '投后 · 管理与赋能',
+    scenes: ['post-investment', 'crm'],
+  },
+] as const;
+
+
 export type Role = (typeof ROLE_TAGS)[number]['value'];
 
 const lookup = <T extends { value: string; label: string }>(arr: readonly T[], v?: string | null) =>
