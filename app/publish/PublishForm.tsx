@@ -10,29 +10,50 @@ import {
 } from '@/components/AttachmentUploader';
 import { Button } from '@/components/ui/Button';
 import { RoleBadge } from '@/components/icons/RoleBadge';
+import { SkillIcon } from '@/components/icons/SkillIcon';
 import {
   SCENE_TAGS,
   INDUSTRY_TAGS,
   CONTENT_TAGS,
-  SKILL_TAGS,
   ASSET_TYPE_HELPERS,
+  FILE_TYPE_OPTIONS,
+  METHOD_TYPE_OPTIONS,
 } from '@/lib/tags';
-import { SkillIcon } from '@/components/icons/SkillIcon';
 
 type CurrentUser = { id: number; role: string; nickname: string };
 
+/** 三种发布分支，对应首屏三张卡片 */
+type Branch = 'prompt' | 'file' | 'method';
+
 export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
   const router = useRouter();
+
+  // —— 分支选择（首屏）——
+  const [branch, setBranch] = useState<Branch | null>(null);
+
+  // —— 共享字段 ——
   const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [assetType, setAssetType] = useState('');
   const [scene, setScene] = useState('');
   const [industry, setIndustry] = useState('');
   const [contents, setContents] = useState<string[]>([]);
+
+  // —— 分支 A · 提示词 ——
+  const [promptText, setPromptText] = useState('');
+
+  // —— 分支 B · Skill 文件 ——
+  const [fileTypeIdx, setFileTypeIdx] = useState<number | null>(null); // FILE_TYPE_OPTIONS 的下标
+  const [fileIntro, setFileIntro] = useState(''); // 正文
+
+  // —— 分支 C · 方法论 ——
+  const [methodType, setMethodType] = useState<string>(''); // assetType
+  const [methodBody, setMethodBody] = useState(''); // 正文（富文本）
+
+  // —— 共享 · 附件 + 资产补充信息 ——
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [sourceUrl, setSourceUrl] = useState('');
   const [installHint, setInstallHint] = useState('');
   const [usageNotes, setUsageNotes] = useState('');
+
   const [err, setErr] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -41,21 +62,48 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
     else if (contents.length < 3) setContents([...contents, v]);
   };
 
-  const assetHelper = assetType ? ASSET_TYPE_HELPERS[assetType] : null;
+  /** 根据分支推导出 assetType */
+  const resolveAssetType = (): string => {
+    if (branch === 'prompt') return 'prompt';
+    if (branch === 'file')
+      return fileTypeIdx !== null ? FILE_TYPE_OPTIONS[fileTypeIdx].assetType : 'template';
+    if (branch === 'method') return methodType || 'workflow';
+    return 'prompt';
+  };
+
+  /** 根据分支推导出正文 body */
+  const resolveBody = (): string => {
+    if (branch === 'prompt') {
+      // 提示词直接作为正文（包一层 <pre> 保留格式）
+      return `<pre>${escapeHtml(promptText)}</pre>`;
+    }
+    if (branch === 'file') return fileIntro;
+    return methodBody;
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
 
-    // Validation
-    if (!assetType) return setErr('请选择 Skill 类型');
-    if (title.trim().length < 5) return setErr('标题至少 5 字符');
-    if (title.length > 100) return setErr('标题最多 100 字符');
+    // —— 基础校验 ——
+    if (!branch) return setErr('请先选择要分享什么');
+    if (title.trim().length < 5) return setErr('标题至少 5 个字');
+    if (title.length > 100) return setErr('标题最多 100 个字');
+    if (!scene) return setErr('请选一个「用在哪个环节」');
+
+    // —— 分支专属校验 ——
+    if (branch === 'prompt' && promptText.trim().length === 0)
+      return setErr('把提示词粘贴进来');
+    if (branch === 'file' && fileTypeIdx === null)
+      return setErr('选一下这是什么类型的文件');
+    if (branch === 'method' && !methodType) return setErr('选一下这属于哪类');
+
+    const body = resolveBody();
     if (!body || body.replace(/<[^>]*>/g, '').trim().length === 0)
-      return setErr('请书写正文');
-    if (!scene) return setErr('请为本卷指定工作场景');
+      return setErr('内容还没写');
+
     if (sourceUrl.trim() && !/^https?:\/\/.+/.test(sourceUrl.trim()))
-      return setErr('来源链接须以 http:// 或 https:// 开头');
+      return setErr('链接须以 http:// 或 https:// 开头');
 
     setSubmitting(true);
     const res = await fetch('/api/posts', {
@@ -67,7 +115,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         tagScene: scene,
         tagIndustry: industry || null,
         tagContent: contents,
-        tagSkill: assetType,
+        tagSkill: resolveAssetType(),
         attachmentIds: files.map((f) => f.id),
         sourceUrl: sourceUrl.trim() || null,
         installHint: installHint.trim() || null,
@@ -77,21 +125,24 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
     const data = await res.json();
     setSubmitting(false);
     if (!res.ok) {
-      setErr(data.error || '落印失败');
+      setErr(data.error || '发布失败');
       return;
     }
     router.push(`/posts/${data.id}`);
     router.refresh();
   };
 
-  // Attachment hint based on asset type
-  const attachmentHint = (() => {
-    if (!assetType) return '选填 · 最多 5 件 · 单件 ≤ 100 MB';
-    if (assetType === 'template') return '建议上传模板文件 · 最多 5 件 · 单件 ≤ 100 MB';
-    if (assetType === 'api-script') return '建议将脚本文件上传 · 最多 5 件 · 单件 ≤ 100 MB';
-    return '选填 · 最多 5 件 · 单件 ≤ 100 MB';
-  })();
+  const assetType = resolveAssetType();
+  const assetHelper = branch ? ASSET_TYPE_HELPERS[assetType] : null;
 
+  // ============ 首屏：分支选择 ============
+  if (!branch) {
+    return (
+      <BranchPicker onPick={setBranch} />
+    );
+  }
+
+  // ============ 分支表单 ============
   return (
     <form onSubmit={submit} className="space-y-section">
       {/* —— 作者条 —— */}
@@ -99,37 +150,28 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         <RoleBadge role={currentUser.role} size={22} />
         <div>
           <p className="font-display tracking-display text-[10px] text-sepia uppercase">
-            Author
+            作者
           </p>
-          <p className="font-serif text-base text-ink-brown">
-            {currentUser.nickname}
-          </p>
+          <p className="font-serif text-base text-ink-brown">{currentUser.nickname}</p>
         </div>
-        <p className="ml-auto font-serif italic text-xs text-sepia">
-          作者一经落印不可更改
-        </p>
+        <button
+          type="button"
+          onClick={() => setBranch(null)}
+          className="ml-auto font-serif italic text-xs text-sepia hover:text-ink-brown transition-colors"
+        >
+          ← 换一种
+        </button>
       </div>
 
-      {/* ===== Section I · Skill 类型 ===== */}
-      <Section numeral="I" title="Skill 类型" hint="必填 · 选择后将自动设置 Skill 标签">
-        <Dimension label="资产类型" required hint="单选 · 必填">
-          <ChipSet>
-            {SKILL_TAGS.map((t) => (
-              <BadgeChip
-                key={t.value}
-                active={assetType === t.value}
-                onClick={() => setAssetType(t.value)}
-                icon={<SkillIcon skill={t.value} size={11} />}
-              >
-                {t.label}
-              </BadgeChip>
-            ))}
-          </ChipSet>
-        </Dimension>
-      </Section>
+      {/* —— 当前分支标识 —— */}
+      <div className="flex items-center gap-2 text-sm text-sepia font-serif italic">
+        <BranchTag branch={branch} />
+        <span>·</span>
+        <span>分享一个{branchLabel(branch)}</span>
+      </div>
 
-      {/* ===== Section II · 标题 + 正文 ===== */}
-      <Section numeral="II" title="标题" hint="5-100 字符 · 一句话概括所要传达">
+      {/* ===== 标题 ===== */}
+      <Section title="标题" hint="一句话概括，让别人一眼知道这是啥">
         <input
           className={cn(
             'w-full bg-transparent border-0 border-b border-paper-edge',
@@ -137,7 +179,13 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
             'focus:border-ink-brown focus:outline-none transition-colors',
             'py-3',
           )}
-          placeholder="此处书写卷名…"
+          placeholder={
+            branch === 'prompt'
+              ? '例：快速摸清一个赛道的提问框架'
+              : branch === 'file'
+                ? '例：尽调资料清单模板'
+                : '例：用 AI 做赛道扫描的完整流程'
+          }
           maxLength={100}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -147,34 +195,120 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         </p>
       </Section>
 
-      <Section numeral="II-a" title="正文" hint="衬线排版 · 可加粗 · 引文 · 列表 · 链接">
-        {assetHelper && (
-          <div className="bg-vellum/50 border border-paper-edge rounded px-3 py-2 text-xs text-leather mb-3">
-            {assetHelper.body}
-          </div>
-        )}
-        <RichEditor value={body} onChange={setBody} placeholder="此处书写正文…" />
-      </Section>
+      {/* ===== 分支专属内容区 ===== */}
+      {branch === 'prompt' && (
+        <Section title="提示词" hint="把你的提示词粘贴在这里，方括号 [像这样] 标出要替换的部分">
+          <textarea
+            className={cn(
+              'w-full bg-vellum/50 border border-paper-edge rounded px-4 py-3',
+              'font-mono text-sm text-ink-brown placeholder:text-sepia/60',
+              'focus:border-ink-brown focus:outline-none transition-colors',
+              'resize-y min-h-[240px]',
+            )}
+            placeholder={'你是一个资深投资人，请帮我分析 [公司名] 所在的 [行业] 赛道…\n\n用方括号标出需要替换的部分，别人复制后改一下就能用。'}
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+          />
+          <p className="mt-1 font-sans text-[11px] text-sepia">
+            提示词会作为正文保存，别人可以直接复制使用。
+          </p>
+        </Section>
+      )}
 
-      {/* ===== Section III · 分类标签 ===== */}
-      <Section numeral="III" title="分类标签" hint="为本卷打上分类印章，便于他人检索">
-        {/* 工作场景 */}
-        <Dimension label="工作场景" required hint="单选 · 必填">
-          <ChipSet>
-            {SCENE_TAGS.map((t) => (
-              <SealChip
-                key={t.value}
-                active={scene === t.value}
-                onClick={() => setScene(t.value)}
+      {branch === 'file' && (
+        <>
+          <Section title="上传文件" hint="别人下载后就能直接用的文件">
+            <AttachmentUploader files={files} onChange={setFiles} />
+          </Section>
+
+          <Section title="这是什么类型的文件？" hint="帮别人一眼看懂怎么打开">
+            <ChipSet>
+              {FILE_TYPE_OPTIONS.map((t, i) => (
+                <SealChip
+                  key={`${t.assetType}-${i}`}
+                  active={fileTypeIdx === i}
+                  onClick={() => setFileTypeIdx(i)}
+                >
+                  {t.label}
+                </SealChip>
+              ))}
+            </ChipSet>
+            <p className="mt-2 font-sans text-[11px] text-sepia">
+              没有完全对应的？选最接近的就行。
+            </p>
+          </Section>
+
+          <Section title="介绍两句（选填）" hint="这个文件怎么来的、适合谁用">
+            <RichEditor value={fileIntro} onChange={setFileIntro} placeholder="简单写几句，让别人知道这文件怎么用…" />
+          </Section>
+        </>
+      )}
+
+      {branch === 'method' && (
+        <>
+          <Section title="这属于哪类？" hint="帮别人找到它">
+            <ChipSet>
+              {METHOD_TYPE_OPTIONS.map((t, i) => (
+                <SealChip
+                  key={`${t.assetType}-${i}`}
+                  active={methodType === t.assetType}
+                  onClick={() => setMethodType(t.assetType)}
+                >
+                  {t.label}
+                </SealChip>
+              ))}
+            </ChipSet>
+          </Section>
+
+          <Section title="正文" hint="把完整的工作流程 / 工具组合 / 案例写清楚">
+            {assetHelper && (
+              <div className="bg-vellum/50 border border-paper-edge rounded px-3 py-2 text-xs text-leather mb-3">
+                {assetHelper.body}
+              </div>
+            )}
+            <RichEditor value={methodBody} onChange={setMethodBody} placeholder="按步骤写，每一步写清楚输入和产出…" />
+          </Section>
+
+          <Section title="配套文件（选填）" hint="有现成文件可以一起传">
+            <AttachmentUploader files={files} onChange={setFiles} />
+          </Section>
+        </>
+      )}
+
+      {/* ===== 用在哪个环节（场景，必填，带示例）===== */}
+      <Section title="用在哪个环节？" hint="必填 · 选一个最贴的，帮别人找到它">
+        <div className="space-y-1.5">
+          {SCENE_TAGS.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setScene(t.value)}
+              className={cn(
+                'w-full text-left flex items-baseline gap-3 px-3 py-2 rounded border transition-colors',
+                scene === t.value
+                  ? 'border-ink-brown bg-parchment'
+                  : 'border-paper-edge bg-vellum/40 hover:border-sepia',
+              )}
+            >
+              <span
+                className={cn(
+                  'font-serif text-sm shrink-0',
+                  scene === t.value ? 'text-ink-brown' : 'text-leather',
+                )}
               >
                 {t.label}
-              </SealChip>
-            ))}
-          </ChipSet>
-        </Dimension>
+              </span>
+              <span className="font-sans text-[11px] text-sepia truncate">
+                {t.example}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Section>
 
-        {/* 行业赛道 */}
-        <Dimension label="行业赛道" hint="单选 · 选填">
+      {/* ===== 补充标签（选填，默认折叠）===== */}
+      <CollapsibleSection title="补充标签（选填）" hint="行业、工作内容，让分类更准">
+        <Dimension label="行业赛道" hint="选填 · 单选">
           <ChipSet>
             <PillChip active={industry === ''} onClick={() => setIndustry('')}>
               不指定
@@ -191,11 +325,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
           </ChipSet>
         </Dimension>
 
-        {/* 工作内容 */}
-        <Dimension
-          label="工作内容"
-          hint={`多选 · 最多 3 个 · 已选 ${contents.length}`}
-        >
+        <Dimension label="工作内容" hint={`多选 · 最多 3 个 · 已选 ${contents.length}`}>
           <ChipSet>
             {CONTENT_TAGS.map((t) => (
               <FoldChip
@@ -209,12 +339,16 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
             ))}
           </ChipSet>
         </Dimension>
-      </Section>
+      </CollapsibleSection>
 
-      {/* ===== Section IV · Skill 资产信息 ===== */}
-      <Section numeral="IV" title="Skill 资产信息" hint="选填 · 帮助他人快速上手使用">
-        {/* 来源链接 */}
-        <Dimension label="来源链接" hint="选填 · 原始出处或下载地址">
+      {/* ===== 补充说明（选填，默认折叠）===== */}
+      <CollapsibleSection title="补充说明（选填）" hint="来源链接、使用说明、适合谁用">
+        {assetHelper && (
+          <p className="mb-3 text-[11px] text-sepia font-sans">
+            {assetHelper.installHint}
+          </p>
+        )}
+        <Dimension label="来源链接" hint="原始出处或下载地址">
           <input
             type="url"
             className={cn(
@@ -228,11 +362,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
           />
         </Dimension>
 
-        {/* 安装/使用说明 */}
-        <Dimension label="安装 / 使用说明" hint="选填 · 最多 2000 字符">
-          {assetHelper && (
-            <p className="mb-1.5 text-[10px] text-leather">{assetHelper.installHint}</p>
-          )}
+        <Dimension label="安装 / 使用说明" hint="选填 · 最多 2000 字">
           <textarea
             className={cn(
               'w-full bg-transparent border border-paper-edge rounded px-3 py-2',
@@ -240,21 +370,14 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
               'focus:border-ink-brown focus:outline-none transition-colors',
               'resize-y min-h-[80px]',
             )}
-            placeholder="描述安装步骤或使用前提条件…"
+            placeholder="写不写都行，写了别人上手更快…"
             maxLength={2000}
             value={installHint}
             onChange={(e) => setInstallHint(e.target.value)}
           />
-          <p className="mt-1 font-sans text-[11px] text-sepia text-right num-osf">
-            {installHint.length}/2000
-          </p>
         </Dimension>
 
-        {/* 适用场景 / 使用心得 */}
-        <Dimension label="适用场景 / 使用心得" hint="选填 · 最多 2000 字符">
-          {assetHelper && (
-            <p className="mb-1.5 text-[10px] text-leather">{assetHelper.usageNotes}</p>
-          )}
+        <Dimension label="适合谁用 / 使用心得" hint="选填 · 最多 2000 字">
           <textarea
             className={cn(
               'w-full bg-transparent border border-paper-edge rounded px-3 py-2',
@@ -262,23 +385,15 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
               'focus:border-ink-brown focus:outline-none transition-colors',
               'resize-y min-h-[80px]',
             )}
-            placeholder="描述适合的场景和使用经验…"
+            placeholder="适合什么人、什么场景用…"
             maxLength={2000}
             value={usageNotes}
             onChange={(e) => setUsageNotes(e.target.value)}
           />
-          <p className="mt-1 font-sans text-[11px] text-sepia text-right num-osf">
-            {usageNotes.length}/2000
-          </p>
         </Dimension>
-      </Section>
+      </CollapsibleSection>
 
-      {/* ===== Section V · 附件 ===== */}
-      <Section numeral="V" title="附件" hint={attachmentHint}>
-        <AttachmentUploader files={files} onChange={setFiles} />
-      </Section>
-
-      {/* ===== 错误 + 提交 ===== */}
+      {/* —— 错误 + 提交 —— */}
       {err && (
         <p className="font-sans text-sm text-wax-red border-l border-wax-red pl-3">
           {err}
@@ -287,18 +402,14 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
 
       <div className="border-t border-paper-edge pt-6 flex items-center justify-between gap-3">
         <p className="font-serif italic text-xs text-sepia hidden sm:block">
-          落印之后即对社群可见
+          发布后大家就能看到
         </p>
         <div className="flex gap-3 ml-auto">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => router.back()}
-          >
-            搁笔
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
+            取消
           </Button>
           <Button type="submit" size="lg" disabled={submitting}>
-            {submitting ? '正在落印…' : '落印 · 发布'}
+            {submitting ? '正在发布…' : '发布'}
           </Button>
         </div>
       </div>
@@ -307,30 +418,119 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
 }
 
 /* ============================================================
-   Section · 章节式分组
+   工具函数
+   ============================================================ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function branchLabel(b: Branch): string {
+  return b === 'prompt' ? '提示词' : b === 'file' ? 'Skill 文件' : '方法论';
+}
+
+/* ============================================================
+   首屏 · 分支选择卡片
+   ============================================================ */
+function BranchPicker({ onPick }: { onPick: (b: Branch) => void }) {
+  const cards: {
+    branch: Branch;
+    title: string;
+    subtitle: string;
+    desc: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      branch: 'prompt',
+      title: '提示词',
+      subtitle: '一段复制就能用的 AI 指令',
+      desc: '写好提示词，别人粘贴到 ChatGPT / Claude 就能用',
+      icon: <SkillIcon skill="prompt" className="h-5 w-5" />,
+    },
+    {
+      branch: 'file',
+      title: 'Skill 文件',
+      subtitle: '模板 / 表格 / 脚本 / SKILL.md',
+      desc: '现成文件，下载就能用',
+      icon: <SkillIcon skill="template" className="h-5 w-5" />,
+    },
+    {
+      branch: 'method',
+      title: '方法论',
+      subtitle: '完整的工作流程或工具组合方案',
+      desc: '把一套方法写清楚，别人照着做',
+      icon: <SkillIcon skill="workflow" className="h-5 w-5" />,
+    },
+  ];
+
+  return (
+    <div>
+      <div className="text-center mb-8">
+        <h2 className="font-serif text-2xl text-ink-brown mb-2">你想分享什么？</h2>
+        <p className="font-serif italic text-sm text-sepia">
+          选一个，后面只显示需要填的
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {cards.map((c) => (
+          <button
+            key={c.branch}
+            type="button"
+            onClick={() => onPick(c.branch)}
+            className={cn(
+              'group text-left rounded-lg border-2 p-5 transition-all',
+              'border-paper-edge bg-vellum/40 hover:border-ink-brown hover:bg-parchment',
+              'hover:-translate-y-0.5',
+            )}
+          >
+            <div className="flex items-center gap-2 mb-3 text-gilded">
+              <span className="grid place-content-center w-9 h-9 rounded-full bg-parchment border border-gilded/40">
+                {c.icon}
+              </span>
+            </div>
+            <p className="font-serif text-xl text-ink-brown mb-1">{c.title}</p>
+            <p className="font-sans text-xs text-leather mb-2">{c.subtitle}</p>
+            <p className="font-serif italic text-[11px] text-sepia">{c.desc}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BranchTag({ branch }: { branch: Branch }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded bg-gilded/15 border border-gilded/40 px-2 py-0.5 text-xs font-sans text-ink-brown">
+      <SkillIcon
+        skill={branch === 'prompt' ? 'prompt' : branch === 'file' ? 'template' : 'workflow'}
+        className="h-3 w-3"
+      />
+      {branchLabel(branch)}
+    </span>
+  );
+}
+
+/* ============================================================
+   Section · 章节式分组（精简版，去掉罗马数字）
    ============================================================ */
 function Section({
-  numeral,
   title,
   hint,
   children,
 }: {
-  numeral: string;
   title: string;
   hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <div className="flex items-baseline gap-3 mb-4">
-        <span className="font-display tracking-display text-xs text-sepia">
-          {numeral}
-        </span>
-        <h2 className="font-serif text-2xl text-ink-brown">{title}</h2>
+      <div className="flex items-baseline gap-3 mb-3">
+        <h2 className="font-serif text-xl text-ink-brown">{title}</h2>
         {hint && (
-          <span className="font-serif italic text-xs text-sepia ml-1">
-            · {hint}
-          </span>
+          <span className="font-serif italic text-xs text-sepia">· {hint}</span>
         )}
       </div>
       {children}
@@ -338,27 +538,53 @@ function Section({
   );
 }
 
+/** 可折叠区块（补充标签 / 补充说明 默认折叠） */
+function CollapsibleSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="border-t border-paper-edge pt-5">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-baseline gap-3 w-full text-left mb-3"
+      >
+        <h2 className="font-serif text-base text-leather">{title}</h2>
+        {hint && (
+          <span className="font-serif italic text-xs text-sepia">· {hint}</span>
+        )}
+        <span className="ml-auto font-serif italic text-xs text-sepia">
+          {open ? '收起' : '展开'}
+        </span>
+      </button>
+      {open && <div className="pb-2">{children}</div>}
+    </section>
+  );
+}
+
 function Dimension({
   label,
   hint,
-  required,
   children,
 }: {
   label: string;
   hint?: string;
-  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 last:mb-0">
-      <div className="flex items-baseline gap-2 mb-2.5">
+    <div className="mb-5 last:mb-0">
+      <div className="flex items-baseline gap-2 mb-2">
         <span className="font-serif text-sm text-ink-brown">{label}</span>
-        {required && (
-          <span className="font-sans text-[10px] text-wax-red tracking-wide uppercase">
-            Required
-          </span>
+        {hint && (
+          <span className="font-sans text-[10px] text-sepia tracking-wide">{hint}</span>
         )}
-        {hint && <span className="font-sans text-[10px] text-sepia tracking-wide">{hint}</span>}
       </div>
       {children}
     </div>
@@ -369,7 +595,7 @@ function ChipSet({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-wrap gap-1.5">{children}</div>;
 }
 
-/* —— 四种 Chip 形态（与 FilterBar 一致） —— */
+/* —— Chip 形态 —— */
 function SealChip({
   active,
   onClick,
@@ -384,7 +610,7 @@ function SealChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center px-2.5 h-6 text-xs font-serif uppercase tracking-wide transition-colors',
+        'inline-flex items-center px-3 h-8 text-sm font-serif transition-colors rounded-sm',
         active
           ? 'border border-ink-brown bg-ink-brown text-vellum'
           : 'border border-paper-edge text-leather hover:border-ink-brown hover:text-ink-brown',
@@ -408,7 +634,7 @@ function PillChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center px-3 h-6 text-xs font-sans rounded-full transition-colors',
+        'inline-flex items-center px-3 h-7 text-xs font-sans rounded-full transition-colors',
         active ? 'bg-leather text-vellum' : 'bg-linen text-leather hover:bg-paper-edge',
       )}
     >
@@ -433,44 +659,13 @@ function FoldChip({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'inline-flex items-center px-2.5 h-6 text-xs font-sans transition-colors',
+        'inline-flex items-center px-2.5 h-7 text-xs font-sans transition-colors',
         active
           ? 'border border-ink-brown bg-parchment text-ink-brown'
           : 'border border-paper-edge bg-parchment text-leather hover:border-sepia',
         disabled && 'opacity-40 cursor-not-allowed',
       )}
     >
-      {children}
-    </button>
-  );
-}
-function BadgeChip({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 pl-1.5 pr-3 h-6 text-xs font-sans rounded-full transition-colors',
-        active
-          ? 'bg-gilded/15 border border-gilded text-ink-brown'
-          : 'bg-vellum border border-gilded/40 text-leather hover:border-gilded',
-      )}
-    >
-      {icon && (
-        <span className="grid place-content-center w-4 h-4 rounded-full bg-parchment text-gilded">
-          {icon}
-        </span>
-      )}
       {children}
     </button>
   );

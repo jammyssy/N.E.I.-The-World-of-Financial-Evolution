@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import { cn } from '@/lib/cn';
 import { getCurrentUser } from '@/lib/session';
 import {
   sceneLabel,
   industryLabel,
   contentLabel,
   skillLabel,
+  HOW_TO_USE,
 } from '@/lib/tags';
 import { formatTime } from '@/lib/format';
 import { POST_STATUS } from '@/lib/status';
@@ -22,6 +24,7 @@ import {
 import { AttachmentList } from '@/components/AttachmentList';
 import { CommentSection } from '@/components/CommentSection';
 import { PostActions } from './PostActions';
+import { CopyPromptButton } from './CopyPromptButton';
 
 export default async function PostDetailPage({
   params,
@@ -66,6 +69,11 @@ export default async function PostDetailPage({
     }
   })();
 
+  // 资产类型 → 「怎么用」固定说明（给不懂技术的读者一句下一步动作）
+  const assetType = post.skillAsset?.assetType ?? null;
+  const howToUse = assetType ? HOW_TO_USE[assetType] : null;
+  const isPrompt = assetType === 'prompt';
+
   return (
     <article className="mx-auto max-w-prose">
       {/* 返回 */}
@@ -74,14 +82,14 @@ export default async function PostDetailPage({
           href="/"
           className="inline-flex items-center gap-1.5 font-serif italic text-sm text-sepia hover:text-ink-brown transition-colors"
         >
-          ← 返回卷宗目录
+          ← 返回首页
         </Link>
       </div>
 
       {/* —— 文章卷首 —— */}
       <header className="text-center mb-10">
         <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-4">
-          Chapter · {sceneLabel(post.tagScene)}
+          {sceneLabel(post.tagScene)}
         </p>
         <h1 className="font-serif text-[28px] sm:text-[40px] leading-tight text-ink-brown mb-6">
           {post.title}
@@ -110,7 +118,7 @@ export default async function PostDetailPage({
           <span>{formatTime(post.createdAt)}</span>
           <span className="text-sepia">·</span>
           <span>
-            <span className="num-osf">{post.viewCount}</span> 次开卷
+            <span className="num-osf">{post.viewCount}</span> 次浏览
           </span>
         </div>
 
@@ -119,11 +127,28 @@ export default async function PostDetailPage({
         </div>
       </header>
 
-      {/* —— Skill 资产信息面板 —— */}
+      {/* —— 「怎么用」固定说明条（给不懂技术的读者）—— */}
+      {howToUse && (
+        <section className="mb-8 rounded-lg border border-gilded/40 bg-gilded/5 p-4 flex gap-3">
+          <span className="shrink-0 mt-0.5 text-gilded" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <path d="M8 1.5 a6.5 6.5 0 0 1 0 13 a6.5 6.5 0 0 1 0 -13 Z" />
+              <path d="M8 5 V8.5" strokeLinecap="round" />
+              <circle cx="8" cy="11" r="0.5" fill="currentColor" />
+            </svg>
+          </span>
+          <div className="text-sm">
+            <p className="font-serif text-ink-brown mb-0.5">怎么用这个{isPrompt ? '提示词' : skillLabel(assetType) || '东西'}</p>
+            <p className="font-sans text-[13px] text-leather leading-relaxed">{howToUse}</p>
+          </div>
+        </section>
+      )}
+
+      {/* —— Skill 资产信息面板（补充说明，作者填了才显示）—— */}
       {post.skillAsset && (post.skillAsset.sourceUrl || post.skillAsset.installHint || post.skillAsset.usageNotes) && (
-        <section className="rounded-lg border-2 border-wax-red/20 bg-vellum/50 p-6">
+        <section className="rounded-lg border-2 border-wax-red/20 bg-vellum/50 p-6 mb-8">
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-base font-semibold text-ink-brown">Skill 资产信息</h2>
+            <h2 className="text-base font-semibold text-ink-brown">补充说明</h2>
             <span className="rounded bg-wax-red px-2 py-0.5 text-[11px] font-medium text-white">
               {skillLabel(post.skillAsset.assetType)}
             </span>
@@ -159,23 +184,38 @@ export default async function PostDetailPage({
             )}
             {post.skillAsset.assetType === 'agent-skill' && !post.skillAsset.installHint && (
               <p className="text-xs text-sepia">
-                这是一个 Agent Skill 资产。SKILL.md 文件可从下方附件中下载，或通过来源链接获取。
+                这是个 SKILL.md 文件，可以从下方附件下载，或通过来源链接获取。
               </p>
             )}
           </dl>
         </section>
       )}
 
-      {/* —— 文章正文 —— */}
-      <div
-        className="prose-manuscript drop-cap-article mb-10"
-        dangerouslySetInnerHTML={{ __html: post.body }}
-      />
+      {/* —— 文章正文（提示词类型带复制按钮）—— */}
+      <div className="mb-10">
+        {isPrompt && (
+          <div className="flex justify-end mb-2">
+            <CopyPromptButton
+              bodyHtml={post.body}
+              postId={post.id}
+              isAuthed={!!uid}
+            />
+          </div>
+        )}
+        <div
+          className={cn(
+            'prose-manuscript drop-cap-article',
+            // 提示词用 <pre> 存，改成等宽 + 换行保留的呈现
+            isPrompt && 'font-mono text-sm bg-vellum/40 border border-paper-edge rounded p-4 not-italic',
+          )}
+          dangerouslySetInnerHTML={{ __html: post.body }}
+        />
+      </div>
 
-      {/* —— 卷末标签 —— */}
+      {/* —— 标签 —— */}
       <section className="border-t border-paper-edge pt-6 flex flex-wrap items-center gap-2">
         <span className="font-display tracking-display text-[10px] text-sepia uppercase mr-2">
-          Tags
+          标签
         </span>
         <Link href={`/?scene=${post.tagScene}`}>
           <SceneChip as="a">{sceneLabel(post.tagScene)}</SceneChip>
@@ -204,7 +244,7 @@ export default async function PostDetailPage({
         postId={post.id}
         attachments={post.attachments}
         isAuthed={!!uid}
-        headerTitle={post.skillAsset?.assetType === 'template' ? '模板文件' : '资源文件'}
+        headerTitle="配套文件"
       />
 
       {/* —— 浮动互动条 —— */}
@@ -225,14 +265,12 @@ export default async function PostDetailPage({
         currentUser={me ? { id: me.id, nickname: me.nickname, role: me.role } : null}
       />
 
-      {/* —— 卷尾花体 —— */}
+      {/* —— 页尾 —— */}
       <footer className="mt-section text-center">
         <div className="flex justify-center mb-3 text-leather">
           <Ornament width={64} />
         </div>
-        <p className="font-serif italic text-sm text-sepia">
-          End of Chapter · 本卷至此
-        </p>
+        <p className="font-serif italic text-sm text-sepia">到这里就结束啦</p>
       </footer>
     </article>
   );

@@ -32,12 +32,9 @@ export function AttachmentList({
     <section className="mt-12">
       {/* 章节小标题 */}
       <div className="flex items-baseline gap-3 mb-5">
-        <span className="font-display tracking-display text-xs text-sepia uppercase">
-          Annex
-        </span>
-        <h3 className="font-serif text-xl text-ink-brown">卷末附记 · {headerTitle}</h3>
+        <h3 className="font-serif text-xl text-ink-brown">{headerTitle}</h3>
         <span className="font-serif italic text-sm text-sepia">
-          共 <span className="num-osf">{attachments.length}</span> 件
+          共 <span className="num-osf">{attachments.length}</span> 个
         </span>
       </div>
 
@@ -71,14 +68,14 @@ export function AttachmentList({
                   download
                   className="inline-flex items-center h-9 px-4 border border-ink-brown text-ink-brown hover:bg-ink-brown hover:text-vellum font-serif text-sm rounded-sm transition-colors"
                 >
-                  取出
+                  下载
                 </a>
               ) : (
                 <Link
                   href={`/login?next=/posts/${postId}`}
                   className="font-serif italic text-sm text-sepia hover:text-ink-brown underline underline-offset-4 decoration-paper-edge hover:decoration-ink-brown"
                 >
-                  登录后取出
+                  登录后下载
                 </Link>
               )}
             </li>

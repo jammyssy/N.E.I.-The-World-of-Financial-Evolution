@@ -12,11 +12,11 @@ export default async function PublishPage() {
       {/* —— 卷首 —— */}
       <header className="text-center mb-10 mt-2">
         <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-3">
-          Compose · Volume I
+          Compose
         </p>
-        <h1 className="font-serif text-4xl text-ink-brown mb-3">撰写新卷</h1>
+        <h1 className="font-serif text-4xl text-ink-brown mb-3">分享一个 Skill</h1>
         <p className="font-serif italic text-leather">
-          Lay down a chapter that future readers will return to
+          把好用的东西沉淀下来，让群里的人都能用上
         </p>
         <div className="flex justify-center mt-5 text-leather">
           <Ornament width={64} />
