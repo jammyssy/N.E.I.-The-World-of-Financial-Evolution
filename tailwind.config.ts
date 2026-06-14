@@ -62,6 +62,8 @@ const config: Config = {
       ],
       // 装饰 —— 仅 logo / 章节大字
       display: ['var(--font-cinzel)', 'Cinzel', 'serif'],
+      // 等宽 —— path 点缀 / 热度数字（档案批注感）
+      mono: ['ui-monospace', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
     },
 
     fontSize: {

@@ -4,7 +4,7 @@ import { getSessionUid } from '@/lib/session';
 import { sanitizeHtml, stripHtml } from '@/lib/validate';
 import { POST_STATUS } from '@/lib/status';
 import { SCENE_TAGS, INDUSTRY_TAGS, CONTENT_TAGS, SKILL_TAGS } from '@/lib/tags';
-import { buildFeedWhere, fetchUserLikeFav, filterByContent } from '@/lib/feed';
+import { buildFeedWhere, fetchUserLikeFav, filterByContent, normalizeSort, sortPosts } from '@/lib/feed';
 
 // Used by POST handler for validation
 const sceneVals: string[] = SCENE_TAGS.map((t) => t.value);
@@ -24,6 +24,7 @@ export async function GET(req: Request) {
   const q = url.searchParams.get('q')?.trim() || '';
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
   const pageSize = 20;
+  const sort = normalizeSort(url.searchParams.get('sort'));
 
   const where = buildFeedWhere({ scene, industry, skill, role, time, q });
 
@@ -40,6 +41,8 @@ export async function GET(req: Request) {
   });
 
   posts = filterByContent(posts, contentList);
+  // 当前页内排序（跨页排序在内存分页模型下有限制，但热门排序下首页用 fetchFeed 全量取，此处够用）
+  posts = sortPosts(posts, sort);
 
   const uid = await getSessionUid();
   const { likedIds, favIds } = await fetchUserLikeFav(uid, posts.map((p) => p.id));

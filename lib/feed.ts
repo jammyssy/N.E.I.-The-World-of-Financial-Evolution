@@ -23,6 +23,7 @@ export type FeedQuery = {
   q?: string;
   contentList?: string[];
   limit?: number;
+  sort?: 'latest' | 'popular';
 };
 
 /**
@@ -84,6 +85,36 @@ export function filterByContent(posts: any[], contentList: string[]) {
 }
 
 /**
+ * 把白名单外的 sort 值归一为 'popular'，防注入 / 防脏值。
+ */
+export function normalizeSort(v: unknown): 'latest' | 'popular' {
+  return v === 'latest' ? 'latest' : 'popular';
+}
+
+/**
+ * 内存排序（fetchFeed 和 api/posts GET 共用，防止 SSR/API 排序逻辑漂移）。
+ *
+ * 入参 posts 是 Prisma findMany 的原始结果（含 viewCount 和 _count）。
+ * - latest：按 createdAt desc
+ * - popular：加权分数 score = viewCount*1 + likes*5 + comments*3，tiebreaker = createdAt desc
+ *   （冷启动期全 0 时自然退化成最新排序，是设计内兜底）
+ *
+ * TODO: 数据量 > 100 后考虑改 SQL 层排序（Prisma _count 只能单维，届时需冗余字段或 raw SQL）。
+ */
+export function sortPosts(posts: any[], sort: 'latest' | 'popular'): any[] {
+  const score = (p: any) =>
+    (p.viewCount || 0) + (p._count?.likes || 0) * 5 + (p._count?.comments || 0) * 3;
+  return posts.sort((a, b) => {
+    if (sort === 'latest') {
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    }
+    const diff = score(b) - score(a);
+    if (diff !== 0) return diff;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+}
+
+/**
  * 从 URL searchParams 提取 FeedQuery
  */
 export function parseFeedQuery(searchParams: { [k: string]: string | string[] | undefined }): FeedQuery {
@@ -98,7 +129,8 @@ export function parseFeedQuery(searchParams: { [k: string]: string | string[] | 
     : typeof searchParams.content === 'string'
     ? [searchParams.content]
     : [];
-  return { scene, industry, skill, role, time, q, contentList };
+  const sort = normalizeSort(searchParams.sort);
+  return { scene, industry, skill, role, time, q, contentList, sort };
 }
 
 /**
@@ -106,7 +138,7 @@ export function parseFeedQuery(searchParams: { [k: string]: string | string[] | 
  * 返回 PostCardData[] 已带 liked / favorited 状态
  */
 export async function fetchFeed(query: FeedQuery, uid: number | null): Promise<PostCardData[]> {
-  const { contentList = [], limit = 50 } = query;
+  const { contentList = [], limit = 50, sort = 'popular' } = query;
 
   const where = buildFeedWhere(query);
 
@@ -122,6 +154,7 @@ export async function fetchFeed(query: FeedQuery, uid: number | null): Promise<P
   });
 
   posts = filterByContent(posts, contentList);
+  posts = sortPosts(posts, sort);
 
   const { likedIds, favIds } = await fetchUserLikeFav(uid, posts.map((p) => p.id));
 
@@ -140,12 +173,18 @@ export async function fetchFeed(query: FeedQuery, uid: number | null): Promise<P
     })(),
     tagSkill: p.tagSkill,
     createdAt: p.createdAt.toISOString(),
-    author: { id: p.author.id, nickname: p.author.nickname, role: p.author.role },
+    author: {
+      id: p.author.id,
+      nickname: p.author.nickname,
+      role: p.author.role,
+      avatarUrl: p.author.avatarUrl,
+    },
     counts: {
       comments: p._count.comments,
       likes: p._count.likes,
       attachments: p._count.attachments,
     },
+    viewCount: p.viewCount,
     liked: likedIds.has(p.id),
     favorited: favIds.has(p.id),
     skillAsset: p.skillAsset

@@ -153,12 +153,18 @@ export default async function ProfilePage({
     })(),
     tagSkill: p.tagSkill,
     createdAt: p.createdAt.toISOString(),
-    author: { id: p.author.id, nickname: p.author.nickname, role: p.author.role },
+    author: {
+      id: p.author.id,
+      nickname: p.author.nickname,
+      role: p.author.role,
+      avatarUrl: p.author.avatarUrl,
+    },
     counts: {
       comments: p._count.comments,
       likes: p._count.likes,
       attachments: p._count.attachments,
     },
+    viewCount: p.viewCount,
     liked: myLikedIds.has(p.id),
     favorited: myFavIds.has(p.id),
     skillAsset: p.skillAsset
