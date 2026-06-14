@@ -19,6 +19,7 @@ import { CommentSection } from '@/components/CommentSection';
 import { PostActions } from './PostActions';
 import { DetailActions } from './DetailActions';
 import { SkillPreview } from './SkillPreview';
+import { PreCopyButton } from './PreCopyButton';
 
 export default async function PostDetailPage({
   params,
@@ -152,15 +153,21 @@ export default async function PostDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
         {/* 左：正文 */}
         <div className="min-w-0">
-          <div
-            className={cn(
-              'prose-manuscript mb-8',
-              // 提示词用 <pre> 存，等宽 + 换行保留；其余用衬线正文（不加 drop-cap，去装饰）
-              isPrompt &&
-                'font-mono text-sm bg-vellum/40 border border-paper-edge rounded p-4 not-italic',
+          <div className="relative mb-8">
+            {/* 提示词帖：<pre> 右上角就地复制按钮 */}
+            {isPrompt && (
+              <PreCopyButton bodyHtml={post.body} postId={post.id} isAuthed={!!uid} />
             )}
-            dangerouslySetInnerHTML={{ __html: post.body }}
-          />
+            <div
+              className={cn(
+                'prose-manuscript',
+                // 提示词用 <pre> 存，等宽 + 换行保留；其余用衬线正文（不加 drop-cap，去装饰）
+                isPrompt &&
+                  'font-mono text-sm bg-vellum/40 border border-paper-edge rounded p-4 not-italic',
+              )}
+              dangerouslySetInnerHTML={{ __html: post.body }}
+            />
+          </div>
 
           {/* SKILL.md / md 附件原文预览（默认折叠，平衡小白与技术人） */}
           {post.attachments[0] && (
