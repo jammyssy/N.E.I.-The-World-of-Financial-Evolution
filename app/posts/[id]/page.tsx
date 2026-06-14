@@ -18,6 +18,7 @@ import { AttachmentList } from '@/components/AttachmentList';
 import { CommentSection } from '@/components/CommentSection';
 import { PostActions } from './PostActions';
 import { DetailActions } from './DetailActions';
+import { SkillPreview } from './SkillPreview';
 
 export default async function PostDetailPage({
   params,
@@ -160,6 +161,14 @@ export default async function PostDetailPage({
             )}
             dangerouslySetInnerHTML={{ __html: post.body }}
           />
+
+          {/* SKILL.md / md 附件原文预览（默认折叠，平衡小白与技术人） */}
+          {post.attachments[0] && (
+            <SkillPreview
+              storageKey={post.attachments[0].storageKey}
+              fileName={post.attachments[0].fileName}
+            />
+          )}
 
           {/* 评论区在左栏下方 */}
           <CommentSection
