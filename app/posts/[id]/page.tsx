@@ -78,6 +78,12 @@ export default async function PostDetailPage({
   // 摘要（去 HTML 标签）
   const excerpt = post.body.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
 
+  // 提示词帖：把 body 按 <pre> 拆成「介绍」+「Prompt 块」，
+  // Prompt 块单独包 relative 容器，让复制按钮锚定到 <pre> 右上角（而非整篇正文顶部）
+  const preSplit = isPrompt ? post.body.split(/(<pre[\s\S]*?<\/pre>)/i) : null;
+  const promptIntro = preSplit ? preSplit.filter((s) => !/<pre/i.test(s)).join('') : post.body;
+  const promptPre = preSplit ? preSplit.find((s) => /<pre/i.test(s)) ?? '' : '';
+
   return (
     <article className="mx-auto max-w-page px-4 sm:px-6">
       {/* 返回 */}
@@ -153,21 +159,33 @@ export default async function PostDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
         {/* 左：正文 */}
         <div className="min-w-0">
-          <div className="relative mb-8">
-            {/* 提示词帖：<pre> 右上角就地复制按钮 */}
-            {isPrompt && (
-              <PreCopyButton bodyHtml={post.body} postId={post.id} isAuthed={!!uid} />
-            )}
-            <div
-              className={cn(
-                'prose-manuscript',
-                // 提示词用 <pre> 存，等宽 + 换行保留；其余用衬线正文（不加 drop-cap，去装饰）
-                isPrompt &&
-                  'font-mono text-sm bg-vellum/40 border border-paper-edge rounded p-4 not-italic',
+          {isPrompt ? (
+            // 提示词帖：介绍部分 + Prompt 块分开渲染，
+            // 复制按钮锚定到 <pre> 方块的右上角
+            <div className="mb-8">
+              {promptIntro && (
+                <div
+                  className="prose-manuscript"
+                  dangerouslySetInnerHTML={{ __html: promptIntro }}
+                />
               )}
+              {promptPre && (
+                <div className="relative mt-4">
+                  <PreCopyButton bodyHtml={promptPre} postId={post.id} isAuthed={!!uid} />
+                  <div
+                    className="prose-manuscript font-mono text-sm bg-vellum/40 border border-paper-edge rounded p-4 not-italic [&_pre]:bg-transparent [&_pre]:p-0 [&_pre]:border-0 [&_pre]:whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: promptPre }}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            // 其他类型：正文整体渲染
+            <div
+              className="prose-manuscript mb-8"
               dangerouslySetInnerHTML={{ __html: post.body }}
             />
-          </div>
+          )}
 
           {/* SKILL.md / md 附件原文预览（默认折叠，平衡小白与技术人） */}
           {post.attachments[0] && (
