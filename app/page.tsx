@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getSessionUid } from '@/lib/session';
 import { fetchFeed, hasAnyFilter, parseFeedQuery } from '@/lib/feed';
+import { prisma } from '@/lib/db';
+import { POST_STATUS } from '@/lib/status';
 import { PostCard } from '@/components/PostCard';
 import { FilterStrip } from '@/components/FilterStrip';
 
@@ -9,7 +11,14 @@ type SP = { [k: string]: string | string[] | undefined };
 export default async function HomePage({ searchParams }: { searchParams: SP }) {
   const query = parseFeedQuery(searchParams);
   const uid = await getSessionUid();
-  const items = await fetchFeed(query, uid);
+
+  // 并行：Feed 列表 + 已收录 Skill 总数（一个 count 查询，零额外往返）
+  const [items, totalSkills] = await Promise.all([
+    fetchFeed(query, uid),
+    prisma.post.count({
+      where: { status: POST_STATUS.PUBLISHED, skillAsset: { isNot: null } },
+    }),
+  ]);
   const hasFilter = hasAnyFilter(query);
 
   return (
@@ -17,9 +26,14 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
       {/* —— 小目录头（压缩版 Hero）—— */}
       <header className="flex items-end justify-between gap-4 pt-6 pb-5 border-b border-paper-edge">
         <div className="min-w-0">
-          <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-1">
-            PEVC Skill 档案馆
-          </p>
+          <div className="flex items-baseline gap-2 mb-1">
+            <p className="font-display tracking-display text-[11px] text-sepia uppercase">
+              PEVC Skill 档案馆
+            </p>
+            <span className="font-sans text-[11px] text-sepia">
+              已收录 <span className="num-osf text-ink-brown font-medium">{totalSkills}</span> 个 Skill
+            </span>
+          </div>
           <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown mb-1">
             发现能用的 Skill
           </h1>
