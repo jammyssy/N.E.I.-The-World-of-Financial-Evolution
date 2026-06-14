@@ -31,12 +31,17 @@ export function CopyPromptButton({
       router.push(`/login?next=/posts/${postId}`);
       return;
     }
-    // <pre> 内容 → 纯文本：去标签、&lt;/&gt;/&amp; 还原
-    const text = bodyHtml
+    // 提取要复制的纯文本：
+    // - 如果 body 里有 <pre>（长介绍 + Prompt 的结构），优先只复制 <pre> 内容（精准复制 Prompt）
+    // - 否则把整个 body 剥成纯文本（纯提示词帖，整个 body 是 <pre> 的兼容）
+    const preMatch = bodyHtml.match(/<pre[\s\S]*?>([\s\S]*?)<\/pre>/i);
+    const raw = preMatch ? preMatch[1] : bodyHtml;
+    const text = raw
       .replace(/<[^>]*>/g, '')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&amp;/g, '&')
+      .replace(/&nbsp;/g, ' ')
       .trim();
 
     try {
