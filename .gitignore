@@ -2,6 +2,7 @@ node_modules
 .next
 out
 dist
+output
 *.log
 .DS_Store
 *.tsbuildinfo
