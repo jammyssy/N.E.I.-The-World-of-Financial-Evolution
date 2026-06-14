@@ -8,7 +8,6 @@ import { formatTime } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { RoleBadge } from '@/components/icons/RoleBadge';
-import { Ornament } from '@/components/icons/Ornament';
 
 type Author = {
   id: number;
@@ -28,18 +27,20 @@ type Comment = {
 };
 
 /**
- * CommentSection · 卷末批注
+ * CommentSection · 详情页评论与问答
  * 评论：左侧细线纵向边 + 衬线人名 + 无衬线正文
  * 回复：再缩进一级，左线变得更浅
- * 输入框：衬线斜体 placeholder，像在书边写批注
+ * 空状态：预设几个常见问题，点击填入输入框，降低发言门槛
  */
 export function CommentSection({
   postId,
   postAuthorId,
+  assetType,
   currentUser,
 }: {
   postId: number;
   postAuthorId: number;
+  assetType: string | null;
   currentUser: { id: number; nickname: string; role: string } | null;
 }) {
   const router = useRouter();
@@ -82,7 +83,7 @@ export function CommentSection({
   };
 
   const remove = async (id: number) => {
-    if (!confirm('确定删除这则批注？')) return;
+    if (!confirm('确定删除这条评论？')) return;
     await fetch(`/api/comments/${id}`, { method: 'DELETE' });
     refresh();
   };
@@ -93,13 +94,10 @@ export function CommentSection({
     <section className="mt-12">
       {/* 章节小标题 */}
       <div className="flex items-baseline gap-3 mb-6">
-        <span className="font-display tracking-display text-xs text-sepia uppercase">
-          Marginalia
-        </span>
-        <h3 className="font-serif text-xl text-ink-brown">卷末批注 · 评论</h3>
+        <h3 className="font-serif text-xl text-ink-brown">评论与问答</h3>
         {total > 0 && (
           <span className="font-serif italic text-sm text-sepia">
-            共 <span className="num-osf">{total}</span> 则
+            共 <span className="num-osf">{total}</span> 条
           </span>
         )}
       </div>
@@ -123,12 +121,13 @@ export function CommentSection({
         )}
 
         <Textarea
+          id="comment-input"
           rows={3}
           maxLength={1000}
           placeholder={
             currentUser
-              ? '在此页空白处写下你的批注…（1-1000 字符，可用 @ 提及）'
-              : '登录后方可批注'
+              ? '问个问题、提个需求，或说说你的用法…（1-1000 字）'
+              : '登录后评论'
           }
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -145,14 +144,14 @@ export function CommentSection({
               onClick={submit}
               disabled={submitting || text.trim().length === 0}
             >
-              {submitting ? '落墨中…' : '落墨'}
+              {submitting ? '发布中…' : '发布'}
             </Button>
           ) : (
             <Link
               href={`/login?next=/posts/${postId}`}
               className="font-serif italic text-sepia hover:text-ink-brown underline underline-offset-4 decoration-paper-edge hover:decoration-ink-brown"
             >
-              登录以批注
+              登录后评论
             </Link>
           )}
         </div>
@@ -161,17 +160,20 @@ export function CommentSection({
       {/* 评论列表 */}
       {loading ? (
         <p className="text-center font-serif italic text-sm text-sepia py-6">
-          正在翻阅批注…
+          加载评论…
         </p>
       ) : items.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="flex justify-center mb-3 text-paper-edge">
-            <Ornament width={56} />
-          </div>
-          <p className="font-serif italic text-leather">
-            尚无批注 · 期待第一笔留墨
-          </p>
-        </div>
+        <EmptyComments
+          assetType={assetType}
+          canComment={!!currentUser}
+          onPick={(q) => {
+            setText(q);
+            // 滚动到输入框，方便用户接着写或直接发
+            const ta = document.getElementById('comment-input');
+            ta?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            ta?.focus();
+          }}
+        />
       ) : (
         <ul className="space-y-7">
           {items.map((c) => (
@@ -194,7 +196,7 @@ export function CommentSection({
 }
 
 /* ============================================================
-   单条批注
+   单条评论
    ============================================================ */
 function CommentItem({
   comment,
@@ -312,3 +314,76 @@ function CommentActions({
     </div>
   );
 }
+
+/* ============================================================
+   空状态 · 预设问题引导（降低冷启动期的发言门槛）
+   根据 assetType 给出不同的问题模板，点击填入输入框
+   ============================================================ */
+const PRESET_QUESTIONS: Record<string, string[]> = {
+  prompt: [
+    '这个提示词用在哪个场景效果最好？',
+    '有没有针对 [XX 行业] 的改法？',
+    '我用的时候输出不太对，可能哪里没填对？',
+  ],
+  'agent-skill': [
+    '这个 SKILL.md 怎么装到我的 Claude Code 里？',
+    '不会写代码能用吗？有没有更简单的办法？',
+    '装上之后具体怎么触发它？',
+  ],
+  template: [
+    '这个模板填起来有哪些坑要注意？',
+    '有没有 Excel / Google Sheets 版本？',
+    '适合多大体量的项目用？',
+  ],
+  workflow: [
+    '完整跑一遍大概要多久？',
+    '哪一步最容易卡住？',
+    '有没有更快的简化版？',
+  ],
+  default: [
+    '这个怎么用？有没有更详细的说明？',
+    '有没有人在 [XX 场景] 试过，效果怎么样？',
+    '遇到问题可以问谁？',
+  ],
+};
+
+function getPresetQuestions(assetType: string | null): string[] {
+  return PRESET_QUESTIONS[assetType ?? 'default'] ?? PRESET_QUESTIONS.default;
+}
+
+function EmptyComments({
+  assetType,
+  canComment,
+  onPick,
+}: {
+  assetType: string | null;
+  canComment: boolean;
+  onPick: (q: string) => void;
+}) {
+  const questions = getPresetQuestions(assetType);
+  return (
+    <div className="border border-paper-edge bg-vellum/50 rounded-md py-8 px-6 text-center">
+      <p className="font-serif italic text-leather mb-1">
+        还没有评论
+      </p>
+      <p className="font-sans text-xs text-sepia mb-5">
+        第一个提问或分享用法的人，就是你
+      </p>
+      {canComment && (
+        <div className="flex flex-wrap justify-center gap-2">
+          {questions.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => onPick(q)}
+              className="inline-flex items-center h-7 px-3 text-xs font-sans text-leather border border-paper-edge bg-parchment rounded-full hover:border-ink-brown hover:text-ink-brown transition-colors"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+

@@ -174,6 +174,7 @@ export default async function PostDetailPage({
           <CommentSection
             postId={id}
             postAuthorId={post.author.id}
+            assetType={assetType}
             currentUser={me ? { id: me.id, nickname: me.nickname, role: me.role } : null}
           />
         </div>
