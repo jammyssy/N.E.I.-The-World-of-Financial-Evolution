@@ -29,19 +29,14 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
           <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-1.5">
             PEVC Skill 档案馆
           </p>
-          <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+          <div className="flex items-baseline gap-3 mb-1.5 flex-wrap">
             <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown">
               发现能用的 Skill
             </h1>
-            {/* 已收录计数 · 蜡封徽章 */}
-            <span className="inline-flex items-baseline gap-1 h-7 px-2.5 border border-wax-red/40 bg-wax-red/5 rounded-sm">
-              <span className="num-osf font-serif text-base text-wax-red font-semibold leading-none">
-                {totalSkills}
-              </span>
-              <span className="font-sans text-[10px] text-wax-red/80 uppercase tracking-wide leading-none">
-                Skills 已收录
-              </span>
-            </span>
+            <p className="font-serif text-3xl sm:text-4xl">
+              <span className="num-osf text-wax-red">{totalSkills}</span>
+              <span className="text-ink-brown"> 个已收录</span>
+            </p>
           </div>
           <p className="font-serif italic text-sm text-leather line-clamp-1">
             PE/VC/FA 从业者的 AI 提示词、模板、工作流 · 找到就能直接用
