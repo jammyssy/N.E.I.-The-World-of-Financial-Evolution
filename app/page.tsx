@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
       {/* —— Feed —— */}
       <section>
         {items.length === 0 ? (
-          <EmptyState filtered={hasFilter} />
+          <EmptyState query={query} />
         ) : groupedStages.length > 0 ? (
           // 不筛选：按投资流程阶段分组
           <div className="space-y-10">
@@ -85,7 +85,23 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
           </div>
         ) : (
           // 筛选时：单一 grid，结果连续呈现
-          <PostGrid items={items} uid={uid} />
+          <>
+            {/* 搜索/筛选结果提示条 */}
+            <div className="mb-4 flex items-baseline gap-2">
+              {query.q ? (
+                <p className="font-serif italic text-sm text-leather">
+                  围绕 <span className="text-ink-brown not-italic">&ldquo;{query.q}&rdquo;</span>{' '}
+                  搜到 <span className="num-osf text-ink-brown not-italic">{items.length}</span> 条
+                </p>
+              ) : (
+                <p className="font-serif italic text-sm text-leather">
+                  当前筛选 · 共 <span className="num-osf text-ink-brown not-italic">{items.length}</span> 条
+                </p>
+              )}
+              <span className="flex-1 h-px bg-paper-edge" />
+            </div>
+            <PostGrid items={items} uid={uid} />
+          </>
         )}
 
         {items.length > 0 && (
@@ -114,25 +130,27 @@ function PostGrid({ items, uid }: { items: PostCardData[]; uid: number | null })
 }
 
 /* —— 空状态 —— */
-function EmptyState({ filtered }: { filtered: boolean }) {
+function EmptyState({ query }: { query: { q?: string; scene?: string; industry?: string; skill?: string; role?: string; time?: string; contentList?: string[] } }) {
+  const hasQ = !!query.q;
+  const hasFilter = !!(query.scene || query.industry || query.skill || query.role || query.time || query.contentList?.length);
   return (
     <div className="border border-paper-edge bg-vellum rounded-md py-16 px-8 text-center">
       <div className="flex justify-center mb-6 text-paper-edge">
         <EnvelopeSeal />
       </div>
       <p className="font-serif italic text-leather text-lg mb-2">
-        {filtered ? '当前条件下没有内容' : '这里还没有内容'}
+        {hasQ ? <>没找到与「{query.q}」相关的内容</> : hasFilter ? '当前筛选下没有内容' : '这里还没有内容'}
       </p>
       <p className="font-sans text-sm text-sepia">
-        {filtered ? '试试调整或清空筛选' : '来分享第一个 Skill 吧'}
+        {hasQ ? '换个关键词，或清空搜索看看全部' : hasFilter ? '试试调整或清空筛选' : '来分享第一个 Skill 吧'}
       </p>
       <div className="mt-6">
-        {filtered ? (
+        {hasQ || hasFilter ? (
           <Link
             href="/"
             className="inline-flex items-center h-9 px-4 border border-ink-brown text-ink-brown hover:bg-ink-brown hover:text-vellum font-serif text-sm rounded-sm transition-colors"
           >
-            清空筛选 · 显示全部
+            清空 · 显示全部
           </Link>
         ) : (
           <Link

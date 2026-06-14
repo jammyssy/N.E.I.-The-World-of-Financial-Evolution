@@ -57,8 +57,8 @@ export function SiteHeader({ user }: { user: User }) {
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const v = q.trim();
-    if (!v) router.push('/search');
-    else router.push(`/search?q=${encodeURIComponent(v)}`);
+    if (!v) router.push('/');
+    else router.push(`/?q=${encodeURIComponent(v)}`);
   };
 
   const logout = async () => {
@@ -89,7 +89,6 @@ export function SiteHeader({ user }: { user: User }) {
           {/* 桌面：主导航 */}
           <nav className="hidden md:flex items-center gap-5 font-serif text-sm">
             <NavLink href="/" active={isActive('/')}>目录</NavLink>
-            <NavLink href="/search" active={isActive('/search')}>检索</NavLink>
           </nav>
 
           {/* 桌面：搜索框 */}
@@ -209,7 +208,6 @@ export function SiteHeader({ user }: { user: User }) {
             {/* 主导航 */}
             <nav className="space-y-3">
               <DrawerLink href="/" active={isActive('/')}>目录</DrawerLink>
-              <DrawerLink href="/search" active={isActive('/search')}>检索</DrawerLink>
               {user && (
                 <DrawerLink href="/publish" active={isActive('/publish')}>
                   发布
