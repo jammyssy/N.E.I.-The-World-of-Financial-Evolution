@@ -89,11 +89,7 @@ export function SiteHeader({ user }: { user: User }) {
           {/* 桌面：主导航 */}
           <nav className="hidden md:flex items-center gap-5 font-serif text-sm">
             <NavLink href="/" active={isActive('/')}>目录</NavLink>
-            <NavLink href="/skills-map" active={isActive('/skills-map')}>Skills Map</NavLink>
             <NavLink href="/search" active={isActive('/search')}>检索</NavLink>
-            <NavLink href="/design-system" active={isActive('/design-system')}>
-              设计系统
-            </NavLink>
           </nav>
 
           {/* 桌面：搜索框 */}
@@ -131,7 +127,7 @@ export function SiteHeader({ user }: { user: User }) {
                   href="/publish"
                   className="hidden sm:inline-flex items-center h-9 px-3 border border-ink-brown text-ink-brown font-serif italic hover:bg-ink-brown hover:text-vellum transition-colors rounded-sm"
                 >
-                  撰写卷帙
+                  分享
                 </Link>
                 <div className="relative" ref={menuRef}>
                   <button
@@ -148,7 +144,7 @@ export function SiteHeader({ user }: { user: User }) {
                         个人主页
                       </MenuItem>
                       <MenuItem href="/publish" onClose={() => setMenuOpen(false)}>
-                        撰写新卷
+                        发布
                       </MenuItem>
                       <div className="my-1 border-t border-paper-edge" />
                       <button
@@ -213,16 +209,12 @@ export function SiteHeader({ user }: { user: User }) {
             {/* 主导航 */}
             <nav className="space-y-3">
               <DrawerLink href="/" active={isActive('/')}>目录</DrawerLink>
-              <DrawerLink href="/skills-map" active={isActive('/skills-map')}>Skills Map</DrawerLink>
               <DrawerLink href="/search" active={isActive('/search')}>检索</DrawerLink>
               {user && (
                 <DrawerLink href="/publish" active={isActive('/publish')}>
-                  撰写新卷
+                  发布
                 </DrawerLink>
               )}
-              <DrawerLink href="/design-system" active={isActive('/design-system')}>
-                设计系统
-              </DrawerLink>
             </nav>
 
             {/* 用户区 */}
