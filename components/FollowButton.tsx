@@ -56,7 +56,7 @@ export function FollowButton({
         )}
       >
         <PlusIcon />
-        <span>结盟</span>
+        <span>关注</span>
       </button>
     );
   }
@@ -78,7 +78,7 @@ export function FollowButton({
       )}
     >
       {hover ? <CrossIcon /> : <CheckIcon />}
-      <span>{hover ? '解盟' : '已结盟'}</span>
+      <span>{hover ? '取消关注' : '已关注'}</span>
     </button>
   );
 }

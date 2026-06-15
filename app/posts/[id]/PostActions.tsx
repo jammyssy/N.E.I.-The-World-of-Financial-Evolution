@@ -70,7 +70,7 @@ export function PostActions({
             <>
               <HeartIcon filled={liked} />
               <span className="font-serif num-osf">{formatCount(likes)}</span>
-              <span className="font-sans text-xs text-sepia ml-0.5">致意</span>
+              <span className="font-sans text-xs text-sepia ml-0.5">赞</span>
             </>
           }
         />
@@ -83,7 +83,7 @@ export function PostActions({
             <>
               <BookmarkIcon filled={fav} />
               <span className="font-serif italic text-sm">
-                {fav ? '已封缄' : '封缄'}
+                {fav ? '已收藏' : '收藏'}
               </span>
             </>
           }

@@ -175,7 +175,7 @@ export function PostCard({
                 active={fav}
                 icon={<BookmarkIcon filled={fav} />}
               >
-                {fav ? '已封缄' : '收藏'}
+                {fav ? '已收藏' : '收藏'}
               </CardAction>
             </div>
           </div>

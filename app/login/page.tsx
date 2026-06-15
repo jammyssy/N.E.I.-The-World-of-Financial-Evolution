@@ -60,9 +60,9 @@ export default function LoginPage() {
 
   return (
     <AuthFrame
-      eyebrow="Sign In · Volume I"
-      title="重启卷宗"
-      subtitle="Continue the codex you've been writing"
+      eyebrow="登录"
+      title="欢迎回来"
+      subtitle="登录后即可发布、评论和收藏"
       footer={
         <>
           初次到访？
@@ -163,7 +163,7 @@ export default function LoginPage() {
         )}
 
         <Button type="submit" block size="lg" disabled={submitting}>
-          {submitting ? '验证中…' : mode === 'password' ? '进入卷宗' : '验证并进入'}
+          {submitting ? '验证中…' : mode === 'password' ? '登录' : '验证并登录'}
         </Button>
 
         {mode === 'password' && (

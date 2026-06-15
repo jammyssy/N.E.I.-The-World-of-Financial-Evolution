@@ -116,9 +116,9 @@ export default function RegisterPage() {
 
   return (
     <AuthFrame
-      eyebrow="Register · Volume I"
-      title="开启新卷"
-      subtitle="Open a new codex under your name"
+      eyebrow="注册"
+      title="加入社区"
+      subtitle="发布、收藏、和同行交流"
       step={{ current: stepIdx, labels: STEPS }}
       size={stepIdx === 2 ? 'md' : 'sm'}
       crest={stepIdx === 2}
@@ -129,7 +129,7 @@ export default function RegisterPage() {
             href="/login"
             className="ml-1 underline underline-offset-4 decoration-paper-edge hover:text-ink-brown hover:decoration-ink-brown"
           >
-            重启卷宗
+            去登录
           </Link>
         </>
       }
@@ -330,7 +330,7 @@ export default function RegisterPage() {
               ← 返回
             </Button>
             <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
-              {submitting ? '正在落印…' : '完成 · 落印封缄'}
+              {submitting ? '提交中…' : '完成注册'}
             </Button>
           </div>
         </form>

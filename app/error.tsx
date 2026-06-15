@@ -32,11 +32,10 @@ export default function GlobalError({
       </div>
 
       <p className="font-serif italic text-lg text-leather mb-2">
-        墨迹突然中断
+        出了点问题
       </p>
       <p className="font-sans text-sm text-sepia mb-2 max-w-md mx-auto leading-relaxed">
-        服务端在落笔时发生了异常。我们已记录这次失误 ——
-        你可以重新落墨，或返回目录稍候片刻。
+        服务端发生了异常。你可以重试，或返回首页稍后再试。
       </p>
       {error.digest && (
         <p className="font-sans text-[10px] text-sepia/70 mb-6 num-osf">
@@ -53,13 +52,13 @@ export default function GlobalError({
           onClick={reset}
           className="inline-flex items-center h-10 px-5 bg-ink-brown text-vellum hover:bg-wax-red font-serif text-sm rounded-sm transition-colors"
         >
-          重新落墨
+          重试
         </button>
         <Link
           href="/"
           className="inline-flex items-center h-10 px-5 border border-ink-brown text-ink-brown hover:bg-ink-brown hover:text-vellum font-serif text-sm rounded-sm transition-colors"
         >
-          回到卷宗目录
+          回到首页
         </Link>
       </div>
     </div>

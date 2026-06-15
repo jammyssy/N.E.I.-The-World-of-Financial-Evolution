@@ -8,13 +8,13 @@ export default function PostNotFound() {
   return (
     <div className="mx-auto max-w-prose pt-12 text-center">
       <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-4">
-        Chapter Missing
+        内容不存在
       </p>
       <h1 className="font-serif text-3xl text-ink-brown mb-3">
-        此卷已不在卷架上
+        找不到这个内容
       </h1>
       <p className="font-serif italic text-leather mb-6">
-        或许尚未启封 · 或许已被作者撤回
+        它可能已被作者删除，或链接有误
       </p>
 
       <div className="flex justify-center mb-6 text-leather">
@@ -26,13 +26,7 @@ export default function PostNotFound() {
           href="/"
           className="inline-flex items-center h-9 px-4 bg-ink-brown text-vellum hover:bg-wax-red font-serif text-sm rounded-sm transition-colors"
         >
-          回到目录
-        </Link>
-        <Link
-          href="/search"
-          className="inline-flex items-center h-9 px-4 border border-ink-brown text-ink-brown hover:bg-ink-brown hover:text-vellum font-serif text-sm rounded-sm transition-colors"
-        >
-          检索其他
+          回到首页
         </Link>
       </div>
     </div>

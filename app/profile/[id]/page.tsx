@@ -21,9 +21,9 @@ type SP = { tab?: string };
 type Tab = 'posts' | 'likes' | 'favorites';
 
 const TAB_LABEL: Record<Tab, { numeral: string; label: string; subtitle: string; ownerOnly: boolean }> = {
-  posts:     { numeral: 'I',   label: '卷帙',  subtitle: '已发布卷',   ownerOnly: false },
-  likes:     { numeral: 'II',  label: '致意',  subtitle: '点赞过的卷', ownerOnly: true },
-  favorites: { numeral: 'III', label: '封缄',  subtitle: '私下收藏',   ownerOnly: true },
+  posts:     { numeral: 'I',   label: '发布',  subtitle: '已发布',   ownerOnly: false },
+  likes:     { numeral: 'II',  label: '点赞',  subtitle: '点赞过', ownerOnly: true },
+  favorites: { numeral: 'III', label: '收藏',  subtitle: '收藏',   ownerOnly: true },
 };
 
 export default async function ProfilePage({
@@ -228,19 +228,19 @@ export default async function ProfilePage({
 
         {/* —— 数据条 —— */}
         <dl className="mt-5 flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2 font-sans text-xs text-sepia">
-          <Stat n={postCount} label="已发表卷" />
+          <Stat n={postCount} label="发布" />
           <Sep dot />
-          <Stat n={receivedLikes} label="受致意" />
+          <Stat n={receivedLikes} label="获赞" />
           <Sep dot />
-          <Stat n={followersCount} label="盟友" />
+          <Stat n={followersCount} label="粉丝" />
           <Sep dot />
-          <Stat n={followingCount} label="所盟" />
+          <Stat n={followingCount} label="关注" />
           {isOwner && (
             <>
               <Sep dot />
-              <Stat n={likeCount} label="我致意" />
+              <Stat n={likeCount} label="我的赞" />
               <Sep dot />
-              <Stat n={favCount} label="封缄" />
+              <Stat n={favCount} label="收藏" />
             </>
           )}
         </dl>
@@ -253,17 +253,17 @@ export default async function ProfilePage({
       {/* ============ Tab 切换 ============ */}
       <nav className="flex justify-center items-baseline gap-0 mb-8 border-b border-paper-edge">
         <TabLink href={`/profile/${id}?tab=posts`} active={tab === 'posts'} numeral={TAB_LABEL.posts.numeral} count={postCount}>
-          卷帙
+          {TAB_LABEL.posts.label}
         </TabLink>
         {isOwner && (
           <>
             <Sep />
             <TabLink href={`/profile/${id}?tab=likes`} active={tab === 'likes'} numeral={TAB_LABEL.likes.numeral} count={likeCount}>
-              致意
+              {TAB_LABEL.likes.label}
             </TabLink>
             <Sep />
             <TabLink href={`/profile/${id}?tab=favorites`} active={tab === 'favorites'} numeral={TAB_LABEL.favorites.numeral} count={favCount}>
-              封缄
+              {TAB_LABEL.favorites.label}
             </TabLink>
           </>
         )}
@@ -295,7 +295,7 @@ export default async function ProfilePage({
             <Ornament width={48} />
           </div>
           <p className="font-serif italic text-sm text-sepia">
-            本集至此 · 共 <span className="num-osf">{items.length}</span> 卷
+            共 <span className="num-osf">{items.length}</span> 条
           </p>
         </footer>
       )}
@@ -364,17 +364,17 @@ function formatStatNumber(n: number): string {
 function EmptyTab({ tab, isOwner }: { tab: Tab; isOwner: boolean }) {
   const COPY: Record<Tab, { line: string; sub: string; cta?: { href: string; label: string } }> = {
     posts: {
-      line: isOwner ? '尚未落印任何一卷' : '此人尚未发表卷帙',
-      sub:  isOwner ? '提起墨笔，写下你想留给同行的内容' : '若你认识 ta，或许可以邀请 ta 撰写一卷',
-      cta:  isOwner ? { href: '/publish', label: '撰写第一卷' } : undefined,
+      line: isOwner ? '还没有发布过内容' : '这个人还没有发布内容',
+      sub:  isOwner ? '把好用的 prompt、模板、工作流分享出来吧' : '',
+      cta:  isOwner ? { href: '/publish', label: '发布第一个' } : undefined,
     },
     likes: {
-      line: '尚未致意任何卷帙',
-      sub:  '看到值得点赞的内容，按下心形即可在此处汇集',
+      line: '还没有点赞过内容',
+      sub:  '看到有用的内容，点个赞就会在这里显示',
     },
     favorites: {
-      line: '封缄柜空无一物',
-      sub:  '将值得反复研读的卷帙封缄，便会在此处列出',
+      line: '还没有收藏内容',
+      sub:  '收藏值得反复用的内容，方便以后查找',
     },
   };
   const c = COPY[tab];

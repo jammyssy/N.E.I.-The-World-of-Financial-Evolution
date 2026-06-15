@@ -17,11 +17,10 @@ export default function NotFound() {
       </div>
 
       <p className="font-serif italic text-lg text-leather mb-2">
-        此页未在卷宗中
+        页面不存在
       </p>
       <p className="font-sans text-sm text-sepia mb-8 max-w-md mx-auto leading-relaxed">
-        你寻找的章节或许从未存在，或许已被翻页带走 ——
-        请回到目录，重新翻阅。
+        你找的页面可能已被删除，或链接有误。
       </p>
 
       <div className="flex justify-center mb-7 text-leather">
@@ -33,13 +32,7 @@ export default function NotFound() {
           href="/"
           className="inline-flex items-center h-10 px-5 bg-ink-brown text-vellum hover:bg-wax-red font-serif text-sm rounded-sm transition-colors"
         >
-          回到卷宗目录
-        </Link>
-        <Link
-          href="/search"
-          className="inline-flex items-center h-10 px-5 border border-ink-brown text-ink-brown hover:bg-ink-brown hover:text-vellum font-serif text-sm rounded-sm transition-colors"
-        >
-          前往检索
+          回到首页
         </Link>
       </div>
     </div>
