@@ -42,7 +42,7 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
           </p>
           <div className="flex flex-col gap-1.5 mb-1.5">
             <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown">
-              发现能用的 Skill
+              发现可用的 PEVC Skills
             </h1>
             <p className="font-serif text-2xl sm:text-3xl">
               <span className="num-osf text-wax-red">{totalSkills}</span>
