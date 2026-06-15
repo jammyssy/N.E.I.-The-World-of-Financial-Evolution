@@ -206,30 +206,46 @@ export default async function PostDetailPage({
 
         {/* 右：sticky 元信息栏 */}
         <aside className="lg:sticky lg:top-6 lg:self-start space-y-5 text-sm">
-          {/* 作者 */}
-          <div className="flex items-center gap-2.5">
-            {post.author.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={post.author.avatarUrl}
-                alt=""
-                className="w-8 h-8 rounded-full object-cover"
-              />
-            ) : (
-              <RoleBadge role={post.author.role} size={28} />
-            )}
-            <div className="min-w-0">
-              <Link
-                href={`/profile/${post.author.id}`}
-                className="font-serif text-base text-ink-brown hover:text-wax-red transition-colors block truncate"
-              >
-                {post.author.nickname}
-              </Link>
-              <p className="font-sans text-[11px] text-sepia">
-                {post.author.role} · {formatTime(post.createdAt)}
-              </p>
+          {/* 作者（优先显示原作者，否则显示发布者） */}
+          {post.skillAsset?.originalAuthor ? (
+            <div className="flex items-center gap-2.5">
+              <span className="grid place-content-center w-8 h-8 rounded-full bg-parchment border border-paper-edge">
+                <RoleBadge role="VC" size={20} />
+              </span>
+              <div className="min-w-0">
+                <p className="font-serif text-base text-ink-brown truncate">
+                  {post.skillAsset.originalAuthor}
+                </p>
+                <p className="font-sans text-[11px] text-sepia">
+                  原作者 · 由 {post.author.nickname} 收录
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              {post.author.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={post.author.avatarUrl}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <RoleBadge role={post.author.role} size={28} />
+              )}
+              <div className="min-w-0">
+                <Link
+                  href={`/profile/${post.author.id}`}
+                  className="font-serif text-base text-ink-brown hover:text-wax-red transition-colors block truncate"
+                >
+                  {post.author.nickname}
+                </Link>
+                <p className="font-sans text-[11px] text-sepia">
+                  {post.author.role} · {formatTime(post.createdAt)}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="h-px bg-paper-edge" />
 

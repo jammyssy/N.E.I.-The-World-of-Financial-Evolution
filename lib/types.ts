@@ -25,6 +25,7 @@ export type PostCardData = {
   skillAsset: {
     id: number;
     assetType: string;
+    originalAuthor?: string | null;
   } | null;
 };
 
@@ -66,6 +67,7 @@ export type ApiSkillDetail = {
     id: number;
     assetType: string;
     sourceUrl: string | null;
+    originalAuthor: string | null;
     installHint: string | null;
     usageNotes: string | null;
   } | null;

@@ -97,6 +97,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           id: post.skillAsset.id,
           assetType: post.skillAsset.assetType,
           sourceUrl: post.skillAsset.sourceUrl,
+          originalAuthor: post.skillAsset.originalAuthor,
           installHint: post.skillAsset.installHint,
           usageNotes: post.skillAsset.usageNotes,
         }

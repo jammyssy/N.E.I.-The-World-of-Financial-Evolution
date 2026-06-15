@@ -93,6 +93,7 @@ export async function POST(req: Request) {
   const sourceUrl = data.sourceUrl ? String(data.sourceUrl).trim() : null;
   const installHint = data.installHint ? String(data.installHint).trim() : null;
   const usageNotes = data.usageNotes ? String(data.usageNotes).trim() : null;
+  const originalAuthor = data.originalAuthor ? String(data.originalAuthor).trim().slice(0, 100) : null;
 
   if (title.length < 5 || title.length > 100) {
     return NextResponse.json({ error: '标题需 5-100 字符' }, { status: 400 });
@@ -147,6 +148,7 @@ export async function POST(req: Request) {
         postId: created.id,
         assetType: tagSkill || 'prompt',
         sourceUrl: sourceUrl || null,
+        originalAuthor: originalAuthor || null,
         installHint: installHint || null,
         usageNotes: usageNotes || null,
       },

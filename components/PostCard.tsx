@@ -266,17 +266,10 @@ function CompactPostCard({
           {/* —— 底 meta 行：作者 + 热度数据 —— */}
           <div className="pt-2 border-t border-paper-edge flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0 font-sans text-[11px]">
-              {post.author.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={post.author.avatarUrl}
-                  alt=""
-                  className="w-3.5 h-3.5 rounded-full shrink-0 object-cover"
-                />
-              ) : (
-                <RoleBadge role={post.author.role} size={14} />
-              )}
-              <span className="text-ink-brown truncate">{post.author.nickname}</span>
+              <RoleBadge role={post.author.role} size={14} />
+              <span className="text-ink-brown truncate">
+                {post.skillAsset?.originalAuthor || post.author.nickname}
+              </span>
               <span className="text-sepia/60 shrink-0">·</span>
               <span className="text-sepia shrink-0">{formatTime(post.createdAt)}</span>
             </div>

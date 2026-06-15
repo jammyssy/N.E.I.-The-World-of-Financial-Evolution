@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     include: {
       author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
       _count: { select: { comments: true, likes: true, attachments: true } },
-      skillAsset: { select: { id: true, assetType: true } },
+      skillAsset: { select: { id: true, assetType: true, originalAuthor: true } },
     },
     orderBy: { createdAt: 'desc' },
     skip: (page - 1) * pageSize,
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
       attachments: p._count.attachments,
     },
     skillAsset: p.skillAsset
-      ? { id: p.skillAsset.id, assetType: p.skillAsset.assetType }
+      ? { id: p.skillAsset.id, assetType: p.skillAsset.assetType, originalAuthor: p.skillAsset.originalAuthor }
       : null,
   }));
 

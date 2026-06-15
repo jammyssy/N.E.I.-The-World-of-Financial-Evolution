@@ -147,7 +147,7 @@ export async function fetchFeed(query: FeedQuery, uid: number | null): Promise<P
     include: {
       author: { select: { id: true, nickname: true, role: true, avatarUrl: true } },
       _count: { select: { comments: true, likes: true, attachments: true } },
-      skillAsset: { select: { id: true, assetType: true } },
+      skillAsset: { select: { id: true, assetType: true, originalAuthor: true } },
     },
     orderBy: { createdAt: 'desc' },
     take: limit,
@@ -188,7 +188,7 @@ export async function fetchFeed(query: FeedQuery, uid: number | null): Promise<P
     liked: likedIds.has(p.id),
     favorited: favIds.has(p.id),
     skillAsset: p.skillAsset
-      ? { id: p.skillAsset.id, assetType: p.skillAsset.assetType }
+      ? { id: p.skillAsset.id, assetType: p.skillAsset.assetType, originalAuthor: p.skillAsset.originalAuthor }
       : null,
   }));
 }

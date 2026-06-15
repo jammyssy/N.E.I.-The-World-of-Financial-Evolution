@@ -30,6 +30,7 @@ export type TranscribedSkill = {
   tagContent: string[];
   installHint?: string | null;
   shouldAttach: boolean; // 是否把抓来的原文作为附件
+  originalAuthor?: string | null; // 原作者（从 GitHub URL owner 提取）
 };
 
 /**
@@ -155,7 +156,17 @@ export async function transcribeSkill(url: string): Promise<TranscribedSkill> {
     tagContent,
     installHint: parsed.installHint ? String(parsed.installHint).slice(0, 2000) : null,
     shouldAttach: !!parsed.shouldAttach,
+    originalAuthor: extractOriginalAuthor(url),
   };
+}
+
+/** 从 GitHub URL 提取 owner 并友好化作为原作者 */
+function extractOriginalAuthor(url: string): string | null {
+  const m = url.match(/github\.com\/([^/]+)\//);
+  if (!m) return null;
+  const owner = m[1];
+  if (owner === 'anthropics') return 'Anthropic';
+  return owner.charAt(0).toUpperCase() + owner.slice(1);
 }
 
 /** 容错 JSON 解析（去掉可能的 markdown 标记和前后噪音） */

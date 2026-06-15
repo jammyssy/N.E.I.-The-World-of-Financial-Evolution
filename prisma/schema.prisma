@@ -81,14 +81,15 @@ model Post {
 
 // ---------- Skill 资产 ----------
 model SkillAsset {
-  id          Int      @id @default(autoincrement())
-  postId      Int      @unique
-  assetType   String
-  sourceUrl   String?
-  installHint String?
-  usageNotes  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  postId         Int      @unique
+  assetType      String
+  sourceUrl      String?
+  originalAuthor String?  // 原作者（搬运帖填，如 Anthropic；普通帖空=作者即发布者）
+  installHint    String?
+  usageNotes     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 

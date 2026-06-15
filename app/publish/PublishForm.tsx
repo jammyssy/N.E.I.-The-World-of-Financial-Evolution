@@ -51,6 +51,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
   // —— 共享 · 附件 + 资产补充信息 ——
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [sourceUrl, setSourceUrl] = useState('');
+  const [originalAuthor, setOriginalAuthor] = useState('');
   const [installHint, setInstallHint] = useState('');
   const [usageNotes, setUsageNotes] = useState('');
 
@@ -73,6 +74,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
       tagIndustry?: string | null;
       tagContent: string[];
       installHint?: string | null;
+      originalAuthor?: string | null;
     };
     attachment: { id: number; fileName: string } | null;
   }) => {
@@ -80,6 +82,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
     setBranch(skill.branch);
     setTitle(skill.title);
     setScene(skill.tagScene);
+    setOriginalAuthor(skill.originalAuthor || '');
     setIndustry(skill.tagIndustry || '');
     setContents(skill.tagContent);
     setInstallHint(skill.installHint || '');
@@ -162,6 +165,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
         tagSkill: resolveAssetType(),
         attachmentIds: files.map((f) => f.id),
         sourceUrl: sourceUrl.trim() || null,
+        originalAuthor: originalAuthor.trim() || null,
         installHint: installHint.trim() || null,
         usageNotes: usageNotes.trim() || null,
       }),
