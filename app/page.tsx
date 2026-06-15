@@ -75,6 +75,7 @@ export default async function HomePage({ searchParams }: { searchParams: SP }) {
               <StageGroup
                 key={stage.value}
                 label={stage.label}
+                stageValue={stage.value}
                 items={stage.items}
                 uid={uid}
               />

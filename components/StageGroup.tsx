@@ -1,28 +1,29 @@
-'use client';
-
-import { useState } from 'react';
-import { PostCard, type PostCardData } from '@/components/PostCard';
+import Link from 'next/link';
+import { PostCard } from '@/components/PostCard';
+import type { PostCardData } from '@/lib/types';
 
 /**
  * 首页「投资流程阶段」分组。
  *
- * 每组默认最多显示 MAX_VISIBLE 个卡片，超出折叠成「查看更多」按钮，
- * 点击展开剩余。避免某个组太长把别的组挤到很下面。
+ * 每组最多显示 MAX_VISIBLE 个卡片，超出显示「查看全部 →」链接，
+ * 跳转到 /stage/[value] 展示该阶段全部内容（带分页）。
+ * 避免首页被某个大组撑爆，同时保留"一屏看清全流程"的概览价值。
  */
 const MAX_VISIBLE = 9;
 
 export function StageGroup({
   label,
+  stageValue,
   items,
   uid,
 }: {
   label: string;
+  stageValue: string;
   items: PostCardData[];
   uid: number | null;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const visible = items.slice(0, MAX_VISIBLE);
   const hasMore = items.length > MAX_VISIBLE;
-  const visible = expanded ? items : items.slice(0, MAX_VISIBLE);
   const hiddenCount = items.length - MAX_VISIBLE;
 
   return (
@@ -43,20 +44,16 @@ export function StageGroup({
 
       {hasMore && (
         <div className="mt-5 text-center">
-          <button
-            type="button"
-            onClick={() => setExpanded(!expanded)}
+          <Link
+            href={`/stage/${stageValue}`}
             className="inline-flex items-center gap-1.5 h-9 px-5 border border-paper-edge bg-vellum hover:border-ink-brown font-serif text-sm text-leather hover:text-ink-brown rounded-sm transition-colors"
           >
-            {expanded ? (
-              <>收起</>
-            ) : (
-              <>
-                查看更多
-                <span className="font-mono text-[11px] text-sepia">+{hiddenCount}</span>
-              </>
-            )}
-          </button>
+            查看全部
+            <span className="font-mono text-[11px] text-sepia">+{hiddenCount}</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <path d="M2 5 H8 M5.5 2 L8 5 L5.5 8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
         </div>
       )}
     </div>
