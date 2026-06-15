@@ -56,9 +56,12 @@ export function FilterStrip() {
     [params, router],
   );
 
+  // 是否有任何筛选激活
+  const hasAnyFilter = !!(scene || skill || industry || role || time || contents.length > 0);
+
   return (
     <section className="border-y border-paper-edge py-4 mb-6">
-      {/* —— 第 1 行：场景 chip（高频）—— */}
+      {/* —— 第 1 行：场景 chip（高频）+ 清空筛选 —— */}
       <div className="flex flex-wrap items-center gap-1.5 mb-3">
         <FilterLabel>场景</FilterLabel>
         <SealChip active={scene === ''} onClick={() => setParam('scene', '')}>
@@ -69,6 +72,19 @@ export function FilterStrip() {
             {t.label}
           </SealChip>
         ))}
+        {/* 清空筛选（有筛选时显示） */}
+        {hasAnyFilter && (
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className="ml-auto inline-flex items-center gap-1 h-6 px-2.5 text-xs font-sans text-wax-red hover:text-ink-brown transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+              <path d="M1 1 L9 9 M9 1 L1 9" strokeLinecap="round" />
+            </svg>
+            清空筛选
+          </button>
+        )}
       </div>
 
       {/* —— 第 2 行：类型 + 身份 + 时间 | 排序 —— */}
