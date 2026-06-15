@@ -104,7 +104,23 @@ const config: Config = {
       // 几乎不用阴影 —— 留作明确的小态
       boxShadow: {
         seal: '0 0 0 1px var(--paper-edge)', // 用 ring 替代 shadow
+        card: '0 2px 8px -2px rgba(61, 46, 31, 0.08)', // 卡片 hover 时的微影
         none: 'none',
+      },
+      // 微交互动画
+      keyframes: {
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        'fade-up': 'fade-up 0.4s ease-out both',
+        'fade-in': 'fade-in 0.3s ease-out both',
       },
     },
   },

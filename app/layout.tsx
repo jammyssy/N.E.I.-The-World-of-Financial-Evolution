@@ -58,7 +58,7 @@ export default async function RootLayout({
     >
       <body className="noise-paper min-h-screen flex flex-col">
         <SiteHeader user={user} />
-        <main className="relative z-[1] flex-1 w-full mx-auto max-w-page px-4 sm:px-6 py-8 sm:py-10">
+        <main className="relative z-[1] flex-1 w-full mx-auto max-w-page px-4 sm:px-6 py-8 sm:py-10 animate-fade-in">
           {children}
         </main>
         <SiteFooter />

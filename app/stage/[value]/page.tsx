@@ -105,8 +105,8 @@ export default async function StagePage({
 
       {/* —— 卡片网格 —— */}
       <ol className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {items.map((p) => (
-          <li key={p.id}>
+        {items.map((p, i) => (
+          <li key={p.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}>
             <PostCard post={p} currentUserId={uid} variant="compact" />
           </li>
         ))}

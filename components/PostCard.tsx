@@ -226,7 +226,7 @@ function CompactPostCard({
         <div
           className={cn(
             'relative flex flex-col h-full border border-paper-edge bg-vellum rounded-md',
-            'transition-colors duration-150 group-hover:border-sepia',
+            'transition-all duration-200 group-hover:border-sepia group-hover:-translate-y-0.5 group-hover:shadow-card',
             'p-3 sm:p-4',
           )}
         >

@@ -35,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       ref={ref}
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-sm border transition-colors duration-150',
+        'inline-flex items-center justify-center gap-2 rounded-sm border transition-all duration-150 active:scale-[0.97]',
         'tracking-wide font-sans text-sm',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'focus-visible:ring-1 focus-visible:ring-ink-brown focus-visible:ring-offset-2 focus-visible:ring-offset-parchment',
