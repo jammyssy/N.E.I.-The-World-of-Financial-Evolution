@@ -1,19 +1,16 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/cn';
-import { SCENE_TAGS, SKILL_TAGS } from '@/lib/tags';
+import { SCENE_TAGS, SKILL_TAGS, INDUSTRY_TAGS, CONTENT_TAGS } from '@/lib/tags';
 import { SkillIcon } from '@/components/icons/SkillIcon';
 
 /**
  * FilterStrip · 首页目录头条
  *
- * 永远展开的分类条（区别于 FilterBar 的折叠/展开）。放在首页 Hero 下方，
- * 把"快速找某个场景/类型的 skill"这个最高频动作前置到内容流上方。
- *
- * 不动 FilterBar（/search 还在用），这里是独立的紧凑实现。
- * URL 联动方式与 FilterBar 一致（useSearchParams + router.push）。
+ * 高频筛选（场景/类型/身份/时间/排序）常驻；次要筛选（行业/工作内容）
+ * 收进「更多筛选」折叠区，需要精细筛选时展开。对应 PRD §5 的四维筛选。
  */
 export function FilterStrip() {
   const router = useRouter();
@@ -23,13 +20,37 @@ export function FilterStrip() {
   const skill = params.get('skill') || '';
   const role = params.get('role') || '';
   const time = params.get('time') || '';
+  const industry = params.get('industry') || '';
+  const contents = params.getAll('content'); // 多选
   const sort = params.get('sort') === 'latest' ? 'latest' : 'popular';
+
+  // 次要筛选（行业/工作内容）默认折叠；已选了任一就自动展开
+  const hasMinorFilter = !!industry || contents.length > 0;
+  const [moreOpen, setMoreOpen] = useState(hasMinorFilter);
 
   const setParam = useCallback(
     (key: string, value: string) => {
       const u = new URLSearchParams(params.toString());
       if (value) u.set(key, value);
       else u.delete(key);
+      router.push(`/?${u.toString()}`);
+    },
+    [params, router],
+  );
+
+  // 工作内容多选（最多 3 个，AND 关系）
+  const toggleContent = useCallback(
+    (v: string) => {
+      const u = new URLSearchParams(params.toString());
+      const current = u.getAll('content');
+      u.delete('content');
+      let next: string[];
+      if (current.includes(v)) next = current.filter((x) => x !== v);
+      else {
+        if (current.length >= 3) return; // 上限 3
+        next = [...current, v];
+      }
+      next.forEach((x) => u.append('content', x));
       router.push(`/?${u.toString()}`);
     },
     [params, router],
@@ -102,6 +123,63 @@ export function FilterStrip() {
             </SegTab>
           </div>
         </div>
+      </div>
+
+      {/* —— 更多筛选（行业 / 工作内容），默认折叠 —— */}
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => setMoreOpen(!moreOpen)}
+          className="inline-flex items-center gap-1.5 font-sans text-xs text-sepia hover:text-ink-brown transition-colors"
+        >
+          <svg
+            className={cn('transition-transform', moreOpen && 'rotate-90')}
+            width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"
+          >
+            <path d="M3 1.5 L7 5 L3 8.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          更多筛选
+          {hasMinorFilter && (
+            <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] bg-wax-red text-vellum rounded-full num-osf">
+              {(industry ? 1 : 0) + contents.length}
+            </span>
+          )}
+        </button>
+
+        {moreOpen && (
+          <div className="mt-3 pt-3 border-t border-paper-edge space-y-3">
+            {/* 行业（单选） */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <FilterLabel>行业</FilterLabel>
+              <PillChip active={industry === ''} onClick={() => setParam('industry', '')}>
+                不限
+              </PillChip>
+              {INDUSTRY_TAGS.map((t) => (
+                <PillChip key={t.value} active={industry === t.value} onClick={() => setParam('industry', t.value)}>
+                  {t.label}
+                </PillChip>
+              ))}
+            </div>
+
+            {/* 工作内容（多选，最多3） */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <FilterLabel>工作内容{contents.length > 0 && `（${contents.length}/3）`}</FilterLabel>
+              {CONTENT_TAGS.map((t) => {
+                const active = contents.includes(t.value);
+                return (
+                  <FoldChip
+                    key={t.value}
+                    active={active}
+                    disabled={!active && contents.length >= 3}
+                    onClick={() => toggleContent(t.value)}
+                  >
+                    {t.label}
+                  </FoldChip>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -219,6 +297,58 @@ function SegTab({
       className={cn(
         'inline-flex items-center px-3 h-7 text-xs font-sans transition-colors',
         active ? 'bg-ink-brown text-vellum' : 'bg-vellum text-leather hover:text-ink-brown',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PillChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center px-3 h-6 text-xs font-sans rounded-full transition-colors',
+        active ? 'bg-leather text-vellum' : 'bg-linen text-leather hover:bg-paper-edge',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FoldChip({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'inline-flex items-center px-2.5 h-6 text-xs font-sans transition-colors',
+        active
+          ? 'border border-ink-brown bg-parchment text-ink-brown'
+          : 'border border-paper-edge bg-parchment text-leather hover:border-sepia',
+        disabled && 'opacity-40 cursor-not-allowed',
       )}
     >
       {children}
