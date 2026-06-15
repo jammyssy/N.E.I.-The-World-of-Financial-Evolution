@@ -89,18 +89,6 @@ export function FilterStrip() {
 
         <Divider />
 
-        {/* 身份 */}
-        <div className="flex items-center gap-1.5">
-          <FilterLabel>身份</FilterLabel>
-          {(['VC', 'PE', 'FA'] as const).map((r) => (
-            <TabChip key={r} active={role === r} onClick={() => setParam('role', role === r ? '' : r)}>
-              {r}
-            </TabChip>
-          ))}
-        </div>
-
-        <Divider />
-
         {/* 时间 */}
         <div className="flex items-center gap-1.5">
           <FilterLabel>时间</FilterLabel>
