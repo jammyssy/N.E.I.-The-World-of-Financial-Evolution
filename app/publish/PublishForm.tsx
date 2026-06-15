@@ -62,6 +62,50 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
     else if (contents.length < 3) setContents([...contents, v]);
   };
 
+  /** AI 转写结果灌进表单（用户 review 后再发布） */
+  const prefillFromAi = (result: {
+    skill: {
+      title: string;
+      intro: string;
+      branch: 'prompt' | 'file' | 'method';
+      tagSkill: string;
+      tagScene: string;
+      tagIndustry?: string | null;
+      tagContent: string[];
+      installHint?: string | null;
+    };
+    attachment: { id: number; fileName: string } | null;
+  }) => {
+    const { skill, attachment } = result;
+    setBranch(skill.branch);
+    setTitle(skill.title);
+    setScene(skill.tagScene);
+    setIndustry(skill.tagIndustry || '');
+    setContents(skill.tagContent);
+    setInstallHint(skill.installHint || '');
+
+    // 分支专属字段
+    if (skill.branch === 'prompt') {
+      setPromptText(skill.intro); // 提示词内容塞正文
+    } else if (skill.branch === 'file') {
+      // tagSkill 反查 FILE_TYPE_OPTIONS 下标
+      const idx = FILE_TYPE_OPTIONS.findIndex((t) => t.assetType === skill.tagSkill);
+      setFileTypeIdx(idx >= 0 ? idx : null);
+      setFileIntro(skill.intro);
+    } else {
+      setMethodType(skill.tagSkill);
+      setMethodBody(skill.intro);
+    }
+
+    // 附件（AI 抓来的原文）
+    if (attachment) {
+      setFiles([
+        ...files,
+        { id: attachment.id, fileName: attachment.fileName, fileSize: 0, mimeType: 'text/markdown' },
+      ]);
+    }
+  };
+
   /** 根据分支推导出 assetType */
   const resolveAssetType = (): string => {
     if (branch === 'prompt') return 'prompt';
@@ -138,7 +182,7 @@ export function PublishForm({ currentUser }: { currentUser: CurrentUser }) {
   // ============ 首屏：分支选择 ============
   if (!branch) {
     return (
-      <BranchPicker onPick={setBranch} />
+      <BranchPicker onPick={setBranch} onTranscribe={prefillFromAi} />
     );
   }
 
@@ -434,7 +478,53 @@ function branchLabel(b: Branch): string {
 /* ============================================================
    首屏 · 分支选择卡片
    ============================================================ */
-function BranchPicker({ onPick }: { onPick: (b: Branch) => void }) {
+function BranchPicker({
+  onPick,
+  onTranscribe,
+}: {
+  onPick: (b: Branch) => void;
+  onTranscribe: (result: {
+    skill: {
+      title: string;
+      intro: string;
+      branch: 'prompt' | 'file' | 'method';
+      tagSkill: string;
+      tagScene: string;
+      tagIndustry?: string | null;
+      tagContent: string[];
+      installHint?: string | null;
+    };
+    attachment: { id: number; fileName: string } | null;
+  }) => void;
+}) {
+  const [ghUrl, setGhUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importErr, setImportErr] = useState('');
+
+  const onImport = async () => {
+    setImportErr('');
+    const url = ghUrl.trim();
+    if (!url) return;
+    setImporting(true);
+    try {
+      const res = await fetch('/api/ai/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportErr(data.error || '导入失败');
+        return;
+      }
+      onTranscribe(data);
+    } catch {
+      setImportErr('网络错误，请重试');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const cards: {
     branch: Branch;
     title: string;
@@ -496,6 +586,42 @@ function BranchPicker({ onPick }: { onPick: (b: Branch) => void }) {
             <p className="font-serif italic text-[11px] text-sepia">{c.desc}</p>
           </button>
         ))}
+      </div>
+
+      {/* —— 或者：从 GitHub 导入（AI 转写）—— */}
+      <div className="mt-8">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="flex-1 h-px bg-paper-edge" />
+          <span className="font-serif italic text-xs text-sepia">或者，AI 帮你从 GitHub 导入</span>
+          <span className="flex-1 h-px bg-paper-edge" />
+        </div>
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+          <input
+            type="url"
+            value={ghUrl}
+            onChange={(e) => setGhUrl(e.target.value)}
+            placeholder="粘贴 GitHub 文件链接（SKILL.md / Prompt…）"
+            className={cn(
+              'flex-1 min-w-0 bg-vellum border border-paper-edge rounded px-3 h-10',
+              'font-sans text-sm text-ink-brown placeholder:text-sepia/60',
+              'focus:border-ink-brown focus:outline-none transition-colors',
+            )}
+          />
+          <button
+            type="button"
+            onClick={onImport}
+            disabled={importing || !ghUrl.trim()}
+            className="inline-flex items-center gap-1.5 h-10 px-5 bg-gilded text-vellum hover:bg-ink-brown disabled:opacity-50 disabled:cursor-not-allowed font-serif text-sm rounded-sm transition-colors shrink-0"
+          >
+            {importing ? 'AI 转写中…' : 'AI 导入'}
+          </button>
+        </div>
+        {importErr && (
+          <p className="mt-2 font-sans text-xs text-wax-red">{importErr}</p>
+        )}
+        <p className="mt-2 font-serif italic text-[11px] text-sepia">
+          贴一个公开的 GitHub 文件链接，AI 会抓取内容并自动填好标题、分类和介绍，你 review 后再发布
+        </p>
       </div>
     </div>
   );

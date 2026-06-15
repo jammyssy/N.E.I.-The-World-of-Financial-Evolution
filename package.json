@@ -12,6 +12,7 @@
     "setup": "prisma db push && tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@prisma/client": "^5.22.0",
     "@tiptap/extension-link": "^3.23.6",
     "@tiptap/extension-placeholder": "^3.23.6",
