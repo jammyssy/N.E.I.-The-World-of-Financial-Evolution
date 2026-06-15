@@ -17,6 +17,8 @@ model User {
   role         String   // VC / PE / FA
   passwordHash String?
   avatarUrl    String?
+  institution  String?  // 机构（选填）
+  bio          String?  // 个人简介（选填）
   githubId        String?   @unique
   githubAvatarUrl String?
   githubUsername  String?

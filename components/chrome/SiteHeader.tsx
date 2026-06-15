@@ -142,6 +142,9 @@ export function SiteHeader({ user }: { user: User }) {
                       <MenuItem href={`/profile/${user.id}`} onClose={() => setMenuOpen(false)}>
                         个人主页
                       </MenuItem>
+                      <MenuItem href="/settings" onClose={() => setMenuOpen(false)}>
+                        设置
+                      </MenuItem>
                       <MenuItem href="/publish" onClose={() => setMenuOpen(false)}>
                         发布
                       </MenuItem>
@@ -209,9 +212,14 @@ export function SiteHeader({ user }: { user: User }) {
             <nav className="space-y-3">
               <DrawerLink href="/" active={isActive('/')}>目录</DrawerLink>
               {user && (
-                <DrawerLink href="/publish" active={isActive('/publish')}>
-                  发布
-                </DrawerLink>
+                <>
+                  <DrawerLink href="/publish" active={isActive('/publish')}>
+                    发布
+                  </DrawerLink>
+                  <DrawerLink href="/settings" active={isActive('/settings')}>
+                    设置
+                  </DrawerLink>
+                </>
               )}
             </nav>
 

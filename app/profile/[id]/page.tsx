@@ -191,7 +191,25 @@ export default async function ProfilePage({
         </h1>
         <p className="font-serif italic text-leather mt-1.5">
           {ROLE_FULL[user.role] ?? user.role}
+          {user.institution && <span className="text-sepia"> · {user.institution}</span>}
         </p>
+        {user.bio && (
+          <p className="mt-3 font-sans text-sm text-leather leading-relaxed max-w-lg mx-auto">
+            {user.bio}
+          </p>
+        )}
+
+        {/* 本人主页：编辑资料入口 */}
+        {isOwner && (
+          <div className="mt-4">
+            <Link
+              href="/settings"
+              className="inline-flex items-center h-8 px-4 border border-paper-edge text-leather hover:border-ink-brown hover:text-ink-brown font-serif text-sm rounded-sm transition-colors"
+            >
+              编辑资料
+            </Link>
+          </div>
+        )}
 
         {/* —— 关注按钮（仅他人主页可见） —— */}
         {!isOwner && (
