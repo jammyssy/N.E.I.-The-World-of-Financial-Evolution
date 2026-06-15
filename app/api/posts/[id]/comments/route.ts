@@ -4,6 +4,8 @@ import { getSessionUid } from '@/lib/session';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const postId = parseInt(params.id, 10);
+  const uid = await getSessionUid();
+
   const all = await prisma.comment.findMany({
     where: { postId },
     include: {
@@ -11,11 +13,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     },
     orderBy: { createdAt: 'asc' },
   });
+
+  // 当前登录用户对这些评论的点赞态（未登录则为空 Set）
+  let likedIds = new Set<number>();
+  if (uid && all.length > 0) {
+    const likes = await prisma.commentLike.findMany({
+      where: { userId: uid, commentId: { in: all.map((c) => c.id) } },
+      select: { commentId: true },
+    });
+    likedIds = new Set(likes.map((l) => l.commentId));
+  }
+
   // 树化：parentId 为 null 的是一级评论，其余作为 replies
   const map = new Map<number, any>();
   const roots: any[] = [];
   all.forEach((c) => {
-    map.set(c.id, { ...c, replies: [] });
+    map.set(c.id, { ...c, liked: likedIds.has(c.id), replies: [] });
   });
   all.forEach((c) => {
     const node = map.get(c.id);

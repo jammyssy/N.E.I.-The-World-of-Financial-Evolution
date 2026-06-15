@@ -21,6 +21,7 @@ type Comment = {
   parentId: number | null;
   body: string;
   likeCount: number;
+  liked?: boolean;
   createdAt: string;
   author: Author;
   replies: Comment[];
@@ -183,8 +184,8 @@ export function CommentSection({
               postAuthorId={postAuthorId}
               currentUser={currentUser}
               onReply={(target) => {
+                // 回复目标只靠 replyTo.id 标识，不往正文插 @昵称（避免污染正文 + 二次回复不替换前缀）
                 setReplyTo({ id: target.id, nickname: target.author.nickname });
-                if (!text.startsWith('@')) setText(`@${target.author.nickname} ` + text);
               }}
               onDelete={remove}
             />
@@ -224,6 +225,10 @@ function CommentItem({
           {comment.body}
         </p>
         <CommentActions
+          commentId={comment.id}
+          initialLiked={!!comment.liked}
+          initialLikeCount={comment.likeCount}
+          currentUser={currentUser}
           onReply={() => onReply(comment)}
           canDelete={!!canDelete}
           onDelete={() => onDelete(comment.id)}
@@ -245,6 +250,10 @@ function CommentItem({
                 {r.body}
               </p>
               <CommentActions
+                commentId={r.id}
+                initialLiked={!!r.liked}
+                initialLikeCount={r.likeCount}
+                currentUser={currentUser}
                 onReply={() => onReply(r)}
                 canDelete={
                   !!currentUser &&
@@ -293,16 +302,65 @@ function CommentHead({
 }
 
 function CommentActions({
+  commentId,
+  initialLiked,
+  initialLikeCount,
+  currentUser,
   onReply,
   canDelete,
   onDelete,
 }: {
+  commentId: number;
+  initialLiked: boolean;
+  initialLikeCount: number;
+  currentUser: { id: number } | null;
   onReply: () => void;
   canDelete: boolean;
   onDelete: () => void;
 }) {
+  const router = useRouter();
+  const [liked, setLiked] = useState(initialLiked);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
+  const [busy, setBusy] = useState(false);
+
+  const toggleLike = async () => {
+    if (!currentUser) {
+      router.push(`/login?next=${window.location.pathname}`);
+      return;
+    }
+    if (busy) return;
+    // 乐观更新
+    const next = !liked;
+    setLiked(next);
+    setLikeCount((n) => n + (next ? 1 : -1));
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (typeof data.likeCount === 'number') setLikeCount(data.likeCount);
+    } catch {
+      // 回滚
+      setLiked(!next);
+      setLikeCount((n) => n + (next ? -1 : 1));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="mt-2 flex items-center gap-4 font-sans text-xs text-sepia">
+      <button
+        onClick={toggleLike}
+        disabled={busy}
+        className={cn(
+          'inline-flex items-center gap-1 transition-colors',
+          liked ? 'text-wax-red' : 'hover:text-ink-brown',
+        )}
+      >
+        <HeartIcon filled={liked} />
+        {likeCount > 0 && <span className="num-osf">{likeCount}</span>}
+      </button>
       <button onClick={onReply} className="hover:text-ink-brown transition-colors">
         回复
       </button>
@@ -312,6 +370,14 @@ function CommentActions({
         </button>
       )}
     </div>
+  );
+}
+
+function HeartIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+      <path d="M8 14 C4 11, 1.5 8.5, 1.5 6 C1.5 4, 3 2.5, 5 2.5 C6.5 2.5, 7.5 3.3, 8 4.5 C8.5 3.3, 9.5 2.5, 11 2.5 C13 2.5, 14.5 4, 14.5 6 C14.5 8.5, 12 11, 8 14 Z" />
+    </svg>
   );
 }
 
