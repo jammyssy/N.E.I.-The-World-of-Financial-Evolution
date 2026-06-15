@@ -19,26 +19,10 @@ import {
   ContentChip,
   SkillChip,
 } from '@/components/ui/Chip';
+import type { PostCardData } from '@/lib/types';
 
-export type PostCardData = {
-  id: number;
-  title: string;
-  excerpt: string;
-  tagScene: string;
-  tagIndustry: string | null;
-  tagContent: string[];
-  tagSkill: string | null;
-  createdAt: string;
-  viewCount: number;
-  author: { id: number; nickname: string; role: string; avatarUrl: string | null };
-  counts: { comments: number; likes: number; attachments: number };
-  liked: boolean;
-  favorited: boolean;
-  skillAsset: {
-    id: number;
-    assetType: string;
-  } | null;
-};
+// PostCardData 定义已抽到 lib/types.ts，这里 re-export 保持向后兼容
+export type { PostCardData } from '@/lib/types';
 
 /**
  * PostCard · 卷宗条目
