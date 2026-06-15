@@ -79,10 +79,10 @@ export function SiteHeader({ user }: { user: User }) {
           {/* Logo */}
           <Link href="/" className="flex items-baseline gap-2.5 shrink-0">
             <span className="font-display tracking-display text-xl text-ink-brown">
-              PEVC
+              N.E.I.
             </span>
-            <span className="hidden sm:inline font-serif italic text-sm text-sepia">
-              Codex
+            <span className="hidden sm:inline font-serif italic text-xs text-sepia">
+              The World of Financial Evolution
             </span>
           </Link>
 

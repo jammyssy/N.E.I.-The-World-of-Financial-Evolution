@@ -42,7 +42,7 @@ export function AuthFrame({
       {/* —— 卷首大字 —— */}
       <div className="text-center mb-10">
         <p className="font-display tracking-display text-xs text-sepia uppercase mb-3">
-          {eyebrow ?? 'PEVC · Knowledge Codex'}
+          {eyebrow ?? 'N.E.I. · New Era Investors'}
         </p>
         <h1 className="font-serif text-4xl text-ink-brown">{title}</h1>
         {subtitle && (

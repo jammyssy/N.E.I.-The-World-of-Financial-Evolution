@@ -8,10 +8,10 @@ export function SiteFooter() {
           <Ornament />
         </div>
         <p className="text-center font-serif italic">
-          PEVC · 一份给一级市场从业者的现代手抄本
+          N.E.I. · New Era Investors · 一份给一级市场从业者的 Skill 档案馆
         </p>
         <p className="mt-2 text-center text-xs">
-          © {new Date().getFullYear()} PEVC Knowledge Platform · All rights reserved
+          © {new Date().getFullYear()} N.E.I. · The World of Financial Evolution
         </p>
       </div>
     </footer>

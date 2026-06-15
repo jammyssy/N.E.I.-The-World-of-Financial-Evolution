@@ -12,7 +12,7 @@ export default function ApiDocsPage() {
       {/* —— 头部 —— */}
       <header className="mb-10 pb-6 border-b border-paper-edge">
         <p className="font-display tracking-display text-[11px] text-sepia uppercase mb-1">
-          PEVC Skill 档案馆 · 开放 API
+          N.E.I. · PEVC Skill 档案馆 · 开放 API
         </p>
         <h1 className="font-serif text-3xl sm:text-4xl text-ink-brown mb-2">API 文档</h1>
         <p className="font-serif italic text-sm text-leather max-w-2xl">

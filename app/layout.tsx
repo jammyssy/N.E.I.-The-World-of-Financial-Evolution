@@ -40,7 +40,7 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: 'PEVC 知识平台',
+  title: 'N.E.I. · PEVC Skill 档案馆',
   description:
     '一个为 VC / PE / FA 从业者沉淀工作流、模板与案例的垂直知识社区',
 };

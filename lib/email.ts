@@ -6,12 +6,12 @@ function getResend(): Resend {
   return _resend;
 }
 
-const FROM = process.env.EMAIL_FROM || 'PEVC Codex <onboarding@resend.dev>';
+const FROM = process.env.EMAIL_FROM || 'N.E.I. <onboarding@resend.dev>';
 
 export async function sendVerificationEmail(email: string, code: string, purpose: 'register' | 'login') {
   const subject = purpose === 'register'
-    ? 'PEVC Codex · 验证你的邮箱'
-    : 'PEVC Codex · 登录验证码';
+    ? 'N.E.I. · 验证你的邮箱'
+    : 'N.E.I. · 登录验证码';
 
   const html = `
     <div style="font-family: serif; max-width: 480px; margin: 0 auto; padding: 32px; color: #3D2E1F;">
