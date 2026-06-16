@@ -17,29 +17,30 @@ import {
  * 4 个函数签名不变，调用方（upload API、download API、AI 转写、import 脚本）零改动。
  */
 
-// —— R2 配置 ——
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL; // 如 https://pub-xxx.r2.dev
+// —— S3 兼容对象存储配置（支持阿里云 OSS / Cloudflare R2 / AWS S3）——
+const S3_ENDPOINT = process.env.S3_ENDPOINT; // 如 https://oss-cn-hangzhou.aliyuncs.com
+const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID;
+const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY;
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
+const S3_PUBLIC_URL = process.env.S3_PUBLIC_URL; // 公开访问域名
+const S3_REGION = process.env.S3_REGION || 'auto'; // OSS 填如 oss-cn-hangzhou
 
-// 是否启用 R2（4 个核心配置都有才启用）
-const useR2 = !!(R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET_NAME);
+// 是否启用对象存储（4 个核心配置都有才启用）
+const useS3 = !!(S3_ENDPOINT && S3_ACCESS_KEY_ID && S3_SECRET_ACCESS_KEY && S3_BUCKET_NAME);
 
 // 本地 fallback
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
-// R2 client（懒加载）
+// S3 client（懒加载）
 let _s3: S3Client | null = null;
 function s3(): S3Client {
   if (!_s3) {
     _s3 = new S3Client({
-      region: 'auto',
-      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      region: S3_REGION,
+      endpoint: S3_ENDPOINT,
       credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID!,
-        secretAccessKey: R2_SECRET_ACCESS_KEY!,
+        accessKeyId: S3_ACCESS_KEY_ID!,
+        secretAccessKey: S3_SECRET_ACCESS_KEY!,
       },
     });
   }
@@ -59,17 +60,17 @@ function generateKey(originalName: string): string {
 // ============================================================
 
 export async function ensureUploadDir() {
-  if (useR2) return; // R2 不需要建目录
+  if (useS3) return; // 对象存储不需要建目录
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
 }
 
 export async function saveBuffer(buf: Buffer, originalName: string): Promise<string> {
   const key = generateKey(originalName);
 
-  if (useR2) {
+  if (useS3) {
     await s3().send(
       new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: S3_BUCKET_NAME,
         Key: key,
         Body: buf,
       }),
@@ -86,10 +87,10 @@ export async function saveBuffer(buf: Buffer, originalName: string): Promise<str
 export async function readFileByKey(key: string): Promise<Buffer> {
   const safe = path.basename(key); // 防穿越
 
-  if (useR2) {
+  if (useS3) {
     const res = await s3().send(
       new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: S3_BUCKET_NAME,
         Key: safe,
       }),
     );
@@ -108,11 +109,11 @@ export async function readFileByKey(key: string): Promise<Buffer> {
 export async function removeKey(key: string): Promise<void> {
   const safe = path.basename(key);
 
-  if (useR2) {
+  if (useS3) {
     try {
       await s3().send(
         new DeleteObjectCommand({
-          Bucket: R2_BUCKET_NAME,
+          Bucket: S3_BUCKET_NAME,
           Key: safe,
         }),
       );
@@ -131,10 +132,9 @@ export async function removeKey(key: string): Promise<void> {
 }
 
 /**
- * 获取文件的公开访问 URL（R2 公开读用，本地不需要）。
- * 目前下载走 API 接口流式返回，这个函数预留给前端直链场景。
+ * 获取文件的公开访问 URL（对象存储公开读用，本地不需要）。
  */
 export function getPublicUrl(key: string): string | null {
-  if (!useR2 || !R2_PUBLIC_URL) return null;
-  return `${R2_PUBLIC_URL}/${path.basename(key)}`;
+  if (!useS3 || !S3_PUBLIC_URL) return null;
+  return `${S3_PUBLIC_URL}/${path.basename(key)}`;
 }
