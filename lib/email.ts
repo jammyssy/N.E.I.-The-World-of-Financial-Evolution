@@ -26,8 +26,11 @@ export async function sendVerificationEmail(email: string, code: string, purpose
     </div>
   `;
 
-  // In development without RESEND_API_KEY, skip sending but don't error
+  // 开发环境没配 RESEND_API_KEY 时，跳过发送；生产环境必须有 key
   if (!process.env.RESEND_API_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('RESEND_API_KEY 未配置，无法发送邮件');
+    }
     console.log(`[DEV] Verification code for ${email}: ${code}`);
     return { id: 'dev-skipped' };
   }
